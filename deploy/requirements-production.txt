@@ -1,0 +1,45 @@
+# Production Requirements for OD Management System
+# Core Flask framework
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+Flask-JWT-Extended==4.5.2
+Flask-Mail==0.9.1
+Flask-CORS==4.0.0
+Flask-Limiter==3.5.0
+
+# Database
+psycopg2-binary==2.9.7
+
+# Security
+Werkzeug==2.3.7
+bcrypt==4.0.1
+
+# Configuration
+python-dotenv==1.0.0
+
+# File processing
+Pillow==10.0.0
+pytesseract==0.3.10
+PyPDF2==3.0.1
+python-magic==0.4.27
+
+# API serialization
+marshmallow==3.20.1
+flask-marshmallow==0.15.0
+marshmallow-sqlalchemy==0.29.0
+
+# Production server
+gunicorn==21.2.0
+
+# Background tasks (optional)
+celery==5.3.1
+redis==5.0.0
+
+# HTTP client
+requests==2.31.0
+
+# Additional production dependencies
+supervisor==4.2.5
+sentry-sdk[flask]==1.38.0
+prometheus-flask-exporter==0.23.0

@@ -19,6 +19,70 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
 
+// Authenticated Image Component
+const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) => {
+  const [imageSrc, setImageSrc] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await api.get(`/od/view/${requestId}/${fileType}`, {
+          responseType: 'blob',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        setImageSrc(url);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load image:', error);
+        setError(true);
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+
+    // Cleanup function to revoke the URL
+    return () => {
+      if (imageSrc) {
+        window.URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [requestId, fileType]);
+
+  if (loading) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-gray-100`}>
+        <div className="text-sm text-gray-500">Loading image...</div>
+      </div>
+    );
+  }
+
+  if (error || !imageSrc) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-gray-100`}>
+        <div className="text-sm text-gray-500">Failed to load image</div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      style={onClick ? { cursor: 'pointer' } : {}}
+    />
+  );
+};
+
 const FacultyDashboard = () => {
   const { user } = useAuth();
   const [odRequests, setOdRequests] = useState([]);
@@ -35,22 +99,42 @@ const FacultyDashboard = () => {
 
   const fetchODRequests = async () => {
     try {
-      console.log('Fetching OD requests for faculty...');
+      console.log('🚀 Fetching OD requests for faculty...');
+      console.log('🔑 Current auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
       const response = await api.get('/faculty/od-requests');
-      console.log('Faculty OD requests response:', response.data);
+      console.log('✅ Faculty OD requests response status:', response.status);
+      console.log('📝 Faculty OD requests response data:', response.data);
+      console.log('📊 Number of requests received:', response.data.od_requests?.length || 0);
+      
       setOdRequests(response.data.od_requests || []);
+      
+      if (response.data.od_requests?.length > 0) {
+        console.log('🎯 First request details:', response.data.od_requests[0]);
+        toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`);
+      } else {
+        console.log('📭 No OD requests found');
+        toast.info('No OD requests found for your department');
+      }
+      
     } catch (error) {
-      console.error('API Error:', error);
-      console.error('Response data:', error.response?.data);
+      console.error('❌ API Error:', error);
+      console.error('❌ Error response status:', error.response?.status);
+      console.error('❌ Error response data:', error.response?.data);
+      console.error('❌ Error message:', error.message);
       
       if (error.response?.status === 401) {
-        // Handle authentication errors gracefully
-        console.log('Authentication error - user may need to re-login');
-        toast.error('Session expired. Please refresh the page to continue.');
-        setOdRequests([]); // Show empty state instead of crashing
+        console.log('🔐 Authentication error - user may need to re-login');
+        toast.error('Session expired. Please refresh and login again.');
+        setOdRequests([]);
+      } else if (error.response?.status === 403) {
+        console.log('🚫 Access denied - insufficient permissions');
+        toast.error('Access denied. You may not have faculty permissions.');
+        setOdRequests([]);
       } else {
-        toast.error('Failed to fetch OD requests. Please try again later.');
-        setOdRequests([]); // Show empty state for other errors too
+        console.log('💥 Other error occurred');
+        toast.error(`Failed to fetch OD requests: ${error.response?.data?.message || error.message}`);
+        setOdRequests([]);
       }
     } finally {
       setLoading(false);
@@ -60,14 +144,21 @@ const FacultyDashboard = () => {
   const handleApproveReject = async (requestId, action, reason = '') => {
     setActionLoading(requestId);
     try {
-      await api.post(`/faculty/od-request/${requestId}/${action}`, 
-        action === 'reject' ? { reason } : {}
-      );
-      toast.success(`Request ${action}ed successfully!`);
+      console.log(`🎯 ${action}ing request ID: ${requestId}`);
+      
+      const endpoint = `/faculty/od-requests/${requestId}/${action}`;
+      const payload = action === 'reject' ? { comments: reason } : {};
+      
+      console.log('📤 Sending to endpoint:', endpoint);
+      console.log('📤 Payload:', payload);
+      
+      await api.post(endpoint, payload);
+      toast.success(`Request ${action}d successfully!`);
       fetchODRequests();
       setShowModal(false);
       setSelectedRequest(null);
     } catch (error) {
+      console.error(`❌ Failed to ${action} request:`, error);
       if (error.response?.status === 401) {
         toast.error('Session expired. Please refresh the page and try again.');
       } else {
@@ -75,6 +166,118 @@ const FacultyDashboard = () => {
       }
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleDownloadFile = async (requestId, fileType, originalFilename = null) => {
+    try {
+      console.log('Downloading file:', { requestId, fileType, originalFilename });
+      const token = localStorage.getItem('token');
+      console.log('Token exists:', !!token);
+      
+      const response = await api.get(`/od/download/${requestId}/${fileType}`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from multiple sources
+      let filename = 'document';
+      
+      // First try to get from response headers
+      const contentDisposition = response.headers['content-disposition'];
+      if (contentDisposition) {
+        // Try different patterns for content-disposition
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      // Fallback to originalFilename parameter if header parsing failed
+      if (filename === 'document' && originalFilename) {
+        filename = originalFilename;
+      }
+      
+      // Final fallback based on file type
+      if (filename === 'document') {
+        const extension = fileType === 'application' ? 'jpg' : 'pdf';
+        filename = `${fileType}_${requestId}.${extension}`;
+      }
+      
+      console.log('Final filename:', filename);
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`File "${filename}" downloaded successfully!`);
+    } catch (error) {
+      console.error('Failed to download file:', error);
+      if (error.response?.status === 401) {
+        toast.error('Authentication required. Please login again.');
+      } else {
+        toast.error('Failed to download file');
+      }
+    }
+  };
+
+  const handleViewFile = async (requestId, fileType) => {
+    try {
+      console.log('Viewing file:', { requestId, fileType });
+      const token = localStorage.getItem('token');
+      console.log('Token exists:', !!token);
+      
+      const response = await api.get(`/od/view/${requestId}/${fileType}`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Get the content type from response headers
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      console.log('Content type:', contentType);
+      
+      // Create blob with proper MIME type
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open in new tab/window
+      const newWindow = window.open(url, '_blank');
+      
+      if (!newWindow) {
+        // If popup was blocked, try a different approach
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      // Clean up the URL after a delay to allow the browser to load it
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 5000);
+      
+      toast.success('Opening student OD form image...');
+    } catch (error) {
+      console.error('Failed to view file:', error);
+      if (error.response?.status === 401) {
+        toast.error('Authentication required. Please login again.');
+      } else {
+        toast.error('Failed to view student OD form image');
+      }
     }
   };
 
@@ -166,8 +369,17 @@ const FacultyDashboard = () => {
                     <p className="text-gray-900">{selectedRequest.event_name}</p>
                   </div>
                   <div>
+                    <label className="text-sm font-medium text-gray-600">OD Type</label>
+                    <p className="text-gray-900">
+                      {selectedRequest.od_type === 'intra_college' ? 'Intra-college' :
+                       selectedRequest.od_type === 'inter_college_coimbatore' ? 'Inter-college (Coimbatore)' :
+                       selectedRequest.od_type === 'inter_college_others' ? 'Inter-college (Others)' :
+                       selectedRequest.od_type}
+                    </p>
+                  </div>
+                  <div>
                     <label className="text-sm font-medium text-gray-600">Host Institution</label>
-                    <p className="text-gray-900">{selectedRequest.host_institution || selectedRequest.venue || 'N/A'}</p>
+                    <p className="text-gray-900">{selectedRequest.host_institution || selectedRequest.college_name || selectedRequest.venue || 'N/A'}</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -179,6 +391,16 @@ const FacultyDashboard = () => {
                       <p className="text-gray-900">{format(new Date(selectedRequest.to_date), 'MMM dd, yyyy')}</p>
                     </div>
                   </div>
+                  {selectedRequest.location_type && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Location Type</label>
+                      <p className="text-gray-900">
+                        {selectedRequest.location_type === 'within_state' ? 'Within State' : 
+                         selectedRequest.location_type === 'out_of_state' ? 'Out of State' : 
+                         selectedRequest.location_type}
+                      </p>
+                    </div>
+                  )}
                   {selectedRequest.event_description && (
                     <div>
                       <label className="text-sm font-medium text-gray-600">Description</label>
@@ -191,7 +413,102 @@ const FacultyDashboard = () => {
                       {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
                     </span>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Submitted On</label>
+                    <p className="text-gray-900">{format(new Date(selectedRequest.created_at), 'MMM dd, yyyy hh:mm a')}</p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Permission Document - CRITICAL FOR APPROVAL */}
+              <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center mb-3">
+                  <FileText className="h-6 w-6 text-blue-600 mr-2" />
+                  <h3 className="text-xl font-bold text-blue-900">📋 Student Permission Document</h3>
+                  <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">REQUIRED FOR APPROVAL</span>
+                </div>
+                
+                {selectedRequest.application_file ? (
+                  <div className="space-y-4">
+                    {/* File Information */}
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center space-x-3">
+                        <label className="text-sm font-semibold text-gray-700">📎 File Name:</label>
+                        <span className="text-sm font-medium text-gray-900">{selectedRequest.application_file.filename}</span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {(selectedRequest.application_file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => handleDownloadFile(selectedRequest.id, 'application', selectedRequest.application_file.filename)}
+                        className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        💾 Download Original
+                      </button>
+                      <button
+                        onClick={() => handleViewFile(selectedRequest.id, 'application')}
+                        className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        � View Document
+                      </button>
+                    </div>
+                    
+                    {/* Large Image Preview - MOST IMPORTANT */}
+                    {selectedRequest.application_file.mime_type?.startsWith('image/') && (
+                      <div className="bg-white rounded-lg border-2 border-gray-300 p-4">
+                        <div className="text-center mb-3">
+                          <h4 className="text-lg font-semibold text-gray-900">📄 Student's Permission Document Preview</h4>
+                          <p className="text-sm text-gray-600">Review this document carefully before making approval decision</p>
+                        </div>
+                        <div className="flex justify-center">
+                          <AuthenticatedImage
+                            requestId={selectedRequest.id}
+                            fileType="application"
+                            alt="Student Permission Document - Required for Approval"
+                            className="max-w-full h-auto max-h-[600px] border-2 border-gray-400 rounded-lg shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                            onClick={() => handleViewFile(selectedRequest.id, 'application')}
+                          />
+                        </div>
+                        <div className="mt-3 text-center">
+                          <p className="text-xs text-gray-500">👆 Click image to view in full resolution</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alert if not an image */}
+                    {!selectedRequest.application_file.mime_type?.startsWith('image/') && (
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <svg className="h-5 w-5 text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.96-.833-2.73 0L4.084 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                          <div>
+                            <h4 className="text-sm font-medium text-yellow-800">Document is not an image</h4>
+                            <p className="text-sm text-yellow-700">Click "View Document" or "Download Original" to review the PDF document</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <svg className="h-6 w-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <h4 className="text-lg font-semibold text-red-800">⚠️ No Permission Document Found</h4>
+                        <p className="text-sm text-red-700">Student has not uploaded their permission document. This request cannot be approved without it.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

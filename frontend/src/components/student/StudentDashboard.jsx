@@ -95,7 +95,7 @@ function StudentDashboard() {
 
   const fetchODRequests = async () => {
     try {
-      const response = await api.get('/od/my-requests');
+      const response = await api.get('/od-requests');
       setOdRequests(response.data.od_requests || []);
     } catch (error) {
       if (error.response?.status === 401) {
@@ -124,7 +124,7 @@ function StudentDashboard() {
       
       // Auto-fill host institution when intra-college is selected
       if (name === 'od_type' && value === 'intra_college') {
-        updated.host_institution = 'KGiSL Institute of Technology';
+        updated.host_institution = 'KGISL Institute of Technology';
         updated.location_type = ''; // Clear location type for intra-college
       } else if (name === 'od_type' && value === 'inter_college_coimbatore') {
         // Clear host institution and auto-set location type for Coimbatore
@@ -186,7 +186,7 @@ function StudentDashboard() {
         throw new Error('Permission document is required');
       }
 
-      await api.post('/od/request', formData, {
+      await api.post('/od-requests', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -210,7 +210,7 @@ function StudentDashboard() {
       if (error.response?.status === 401) {
         toast.error('Session expired. Please refresh the page and try again.');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to submit request');
+        toast.error(error.response?.data?.error || error.response?.data?.message || 'OD exists already');
       }
     } finally {
       setSubmitting(false);

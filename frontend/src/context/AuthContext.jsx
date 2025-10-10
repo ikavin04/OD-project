@@ -24,6 +24,9 @@ export const AuthProvider = ({ children }) => {
         console.log('Token found in localStorage, verifying with server...');
         
         try {
+          // Set the token in axios headers before making request
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
           // Try to get current user info to verify token is still valid
           const response = await api.get('/auth/me');
           if (response.data.user) {
@@ -31,10 +34,12 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ Token verified, user set:', response.data.user);
           }
         } catch (error) {
-          console.log('❌ Token verification failed, removing token');
+          console.log('❌ Token verification failed, removing token:', error.response?.data || error.message);
           localStorage.removeItem('token');
           delete api.defaults.headers.common['Authorization'];
         }
+      } else {
+        console.log('No token found in localStorage');
       }
       setLoading(false);
     };
@@ -55,8 +60,9 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid response from server');
       }
 
-      // Store token
+      // Store token and set axios header
       localStorage.setItem('token', access_token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       // Set user state
       setUser(userData);
@@ -68,7 +74,7 @@ export const AuthProvider = ({ children }) => {
       console.error('❌ Login error:', error);
       console.error('❌ Error response:', error.response?.data);
       
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
       throw new Error(message);
     }
   };

@@ -11,6 +11,7 @@ import Header from './components/common/Header';
 import LoginForm from './components/auth/LoginForm';
 import StudentDashboard from './components/student/StudentDashboard';
 import FacultyDashboard from './components/faculty/FacultyDashboard';
+import DebugPage from './components/debug/DebugPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -75,6 +76,12 @@ function AppRoutes() {
           } 
         />
 
+        {/* Debug Page */}
+        <Route 
+          path="/debug" 
+          element={<DebugPage />} 
+        />
+
         {/* 404 Route */}
         <Route 
           path="*" 
@@ -91,7 +98,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
           <div className="min-h-screen bg-gray-50">
             <AppRoutes />
             <Toaster 
