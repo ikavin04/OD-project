@@ -1,5 +1,5 @@
 from app import db
-from app.models.user import ODStatus, ODType, ProofStatus
+from .enums import ODStatus, ODType, ProofStatus
 from datetime import datetime, timezone, timedelta
 import json
 
