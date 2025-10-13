@@ -251,12 +251,11 @@ const LoginForm = () => {
 
           {/* Default Credentials Info */}
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Default Login Credentials:</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Test Login Credentials:</h4>
             <div className="text-xs text-gray-600 space-y-1">
-              <div><strong>Student:</strong> student@college.edu / Student@2025!Pass</div>
-              <div><strong>Faculty:</strong> faculty@college.edu / Faculty@2025!Pass</div>
-              <div><strong>HOD:</strong> hod@college.edu / HOD@2025!Secure</div>
-              <div><strong>Admin:</strong> admin@college.edu / Admin@2025!Secure</div>
+              <div><strong>Student:</strong> 24ucs158manisha@kgkite.ac.in / Kgkite@1234</div>
+              <div><strong>Roll Number:</strong> 24UCS158</div>
+              <div><strong>Faculty:</strong> dr.rajesh@kgkite.ac.in / Faculty@123</div>
             </div>
           </div>
         </form>

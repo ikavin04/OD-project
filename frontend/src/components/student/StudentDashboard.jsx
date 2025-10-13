@@ -99,7 +99,7 @@ function StudentDashboard() {
 
   const fetchODRequests = async () => {
     try {
-      const response = await api.get('/od/my-requests');
+      const response = await api.get('/od-requests');
       setOdRequests(response.data.od_requests || []);
     } catch (error) {
       if (error.response?.status === 401) {
@@ -221,7 +221,7 @@ function StudentDashboard() {
         throw new Error('Permission document is required');
       }
 
-      await api.post('/od/request', formData, {
+      await api.post('/od-requests', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -246,7 +246,7 @@ function StudentDashboard() {
       if (error.response?.status === 401) {
         toast.error('Session expired. Please refresh the page and try again.');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to submit request');
+        toast.error(error.response?.data?.error || error.response?.data?.message || 'OD exists already');
       }
     } finally {
       setSubmitting(false);
