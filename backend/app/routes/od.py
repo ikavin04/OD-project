@@ -13,6 +13,85 @@ def get_current_user_od():
     """Get current user from JWT token"""
     return get_current_user()
 
+@od_bp.route('/can-apply', methods=['GET'])
+@jwt_required()
+def can_apply_for_od():
+    """Check if student can apply for new OD"""
+    try:
+        user, user_type = get_current_user_od()
+        if not user or not user_type:
+            return jsonify({'message': 'Invalid or missing token'}), 401
+        
+        if user_type != 'student':
+            return jsonify({'message': 'Only students can check OD application eligibility'}), 403
+        
+        # Check for pending OD requests
+        pending_od = ODRequest.query.filter_by(
+            student_id=user.id,
+            status=ODStatus.PENDING
+        ).first()
+        
+        if pending_od:
+            return jsonify({
+                'can_apply': False,
+                'reason': 'pending_od',
+                'message': 'You already have a pending OD request',
+                'blocking_od': pending_od.to_dict()
+            }), 200
+        
+        # Check for overdue proof submissions
+        current_time = datetime.now()
+        overdue_proofs = ODRequest.query.filter(
+            ODRequest.student_id == user.id,
+            ODRequest.status == ODStatus.APPROVED,
+            db.or_(
+                # Missing attendance proof after deadline
+                db.and_(
+                    ODRequest.attendance_proof_deadline.isnot(None),
+                    ODRequest.attendance_proof_deadline < current_time,
+                    ODRequest.attendance_proof_uploaded_at.is_(None)
+                ),
+                # Missing certificate after deadline
+                db.and_(
+                    ODRequest.certificate_submission_deadline.isnot(None),
+                    ODRequest.certificate_submission_deadline < current_time,
+                    ODRequest.certificate_uploaded_at.is_(None),
+                    ODRequest.attendance_proof_uploaded_at.isnot(None)
+                )
+            )
+        ).all()
+        
+        if overdue_proofs:
+            return jsonify({
+                'can_apply': False,
+                'reason': 'overdue_proofs',
+                'message': 'You have overdue proof submissions that must be completed before applying for new ODs',
+                'overdue_submissions': [
+                    {
+                        'od_id': od.id,
+                        'event_name': od.event_name,
+                        'missing_proofs': [
+                            'attendance_proof' if (od.attendance_proof_deadline and 
+                                                 od.attendance_proof_deadline < current_time and 
+                                                 not od.attendance_proof_uploaded_at) else None,
+                            'certificate' if (od.certificate_submission_deadline and 
+                                            od.certificate_submission_deadline < current_time and 
+                                            not od.certificate_uploaded_at and 
+                                            od.attendance_proof_uploaded_at) else None
+                        ]
+                    }
+                    for od in overdue_proofs
+                ]
+            }), 200
+        
+        return jsonify({
+            'can_apply': True,
+            'message': 'You can apply for a new OD request'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'Failed to check OD application eligibility', 'error': str(e)}), 500
+
 @od_bp.route('/request', methods=['POST'])
 @jwt_required()
 def create_od_request():
@@ -24,6 +103,35 @@ def create_od_request():
         
         if user_type != 'student':
             return jsonify({'message': 'Only students can create OD requests'}), 403
+        
+        # Check if student has any pending proof submissions
+        pending_proofs = ODRequest.query.filter(
+            ODRequest.student_id == user.id,
+            ODRequest.status == ODStatus.APPROVED,
+            db.or_(
+                # Missing attendance proof after deadline
+                db.and_(
+                    ODRequest.attendance_proof_deadline.isnot(None),
+                    ODRequest.attendance_proof_deadline < datetime.now(),
+                    ODRequest.attendance_proof_uploaded_at.is_(None)
+                ),
+                # Missing certificate after deadline
+                db.and_(
+                    ODRequest.certificate_submission_deadline.isnot(None),
+                    ODRequest.certificate_submission_deadline < datetime.now(),
+                    ODRequest.certificate_uploaded_at.is_(None),
+                    ODRequest.attendance_proof_uploaded_at.isnot(None)
+                )
+            )
+        ).first()
+        
+        if pending_proofs:
+            return jsonify({
+                'message': 'You cannot apply for new OD requests until all pending proof submissions are completed',
+                'pending_od_id': pending_proofs.id,
+                'pending_od_event': pending_proofs.event_name,
+                'blocking_reason': 'overdue_proofs'
+            }), 400
         
         # Check if student has any pending or approved OD requests
         existing_od = ODRequest.query.filter_by(
@@ -81,8 +189,9 @@ def create_od_request():
         
         # Validate college/institution based on OD type
         if od_type == ODType.INTRA_COLLEGE:
-            if not data.get('college_name'):
-                return jsonify({'message': 'College name is required for intra-college events'}), 400
+            # For intra-college events, use host_institution or default to college name
+            if not data.get('host_institution'):
+                return jsonify({'message': 'Host institution is required for intra-college events'}), 400
         elif od_type in [ODType.INTER_COLLEGE_COIMBATORE, ODType.INTER_COLLEGE_OTHERS]:
             if not data.get('host_institution'):
                 return jsonify({'message': 'Host institution is required for inter-college events'}), 400
@@ -131,7 +240,7 @@ def create_od_request():
             from_date=from_date,
             to_date=to_date,
             od_type=od_type,
-            college_name=data.get('college_name'),
+            college_name=data.get('host_institution') if od_type == ODType.INTRA_COLLEGE else None,
             host_institution=data.get('host_institution'),
             venue=data.get('venue'),
             location_type=location_type,
@@ -296,11 +405,102 @@ def download_file(od_id, file_type):
         else:
             return jsonify({'message': 'Invalid file type'}), 400
         
-        if not file_path or not os.path.exists(file_path):
-            return jsonify({'message': 'File not found'}), 404
+        # Handle both absolute and relative paths
+        if not file_path:
+            return jsonify({'message': 'File path not found'}), 404
+        
+        # If path is not absolute, make it relative to the backend directory
+        if not os.path.isabs(file_path):
+            from flask import current_app
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            file_path = os.path.join(backend_dir, file_path)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'message': f'File not found: {file_path}'}), 404
         
         from flask import send_file
-        return send_file(file_path, as_attachment=True, download_name=filename)
+        
+        # Get the mimetype for the file
+        mimetype = None
+        if file_type == 'application':
+            mimetype = od_request.application_mime_type
+        elif file_type == 'attendance_proof':
+            mimetype = od_request.attendance_proof_mime_type
+        elif file_type == 'certificate':
+            mimetype = od_request.certificate_mime_type
+        
+        return send_file(
+            file_path, 
+            as_attachment=True, 
+            download_name=filename,
+            mimetype=mimetype
+        )
         
     except Exception as e:
         return jsonify({'message': 'Failed to download file', 'error': str(e)}), 500
+
+
+@od_bp.route('/view/<int:od_id>/<file_type>')
+@jwt_required()
+def view_file(od_id, file_type):
+    """View OD request files in browser (not as download)"""
+    try:
+        user, user_type = get_current_user_od()
+        if not user or not user_type:
+            return jsonify({'message': 'Invalid or missing token'}), 401
+        
+        od_request = ODRequest.query.get_or_404(od_id)
+        
+        # Check permissions
+        if user_type == 'student' and od_request.student_id != user.id:
+            return jsonify({'message': 'Access denied'}), 403
+        
+        # Get file path based on type
+        file_path = None
+        filename = None
+        
+        if file_type == 'application':
+            file_path = od_request.application_file_path
+            filename = od_request.application_original_name
+        elif file_type == 'attendance_proof':
+            file_path = od_request.attendance_proof_file_path
+            filename = od_request.attendance_proof_original_name
+        elif file_type == 'certificate':
+            file_path = od_request.certificate_file_path
+            filename = od_request.certificate_original_name
+        else:
+            return jsonify({'message': 'Invalid file type'}), 400
+        
+        # Handle both absolute and relative paths
+        if not file_path:
+            return jsonify({'message': 'File path not found'}), 404
+        
+        # If path is not absolute, make it relative to the backend directory
+        if not os.path.isabs(file_path):
+            from flask import current_app
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            file_path = os.path.join(backend_dir, file_path)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'message': f'File not found: {file_path}'}), 404
+        
+        from flask import send_file
+        
+        # Get the mimetype for the file
+        mimetype = None
+        if file_type == 'application':
+            mimetype = od_request.application_mime_type
+        elif file_type == 'attendance_proof':
+            mimetype = od_request.attendance_proof_mime_type
+        elif file_type == 'certificate':
+            mimetype = od_request.certificate_mime_type
+        
+        # Send file for viewing (not as attachment)
+        return send_file(
+            file_path, 
+            as_attachment=False,  # This is the key difference!
+            mimetype=mimetype
+        )
+        
+    except Exception as e:
+        return jsonify({'message': 'Failed to view file', 'error': str(e)}), 500

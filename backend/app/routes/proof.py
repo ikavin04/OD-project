@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required
 from app import db
 from app.models import Student, Faculty, ODRequest, ODStatus, ProofStatus
 from app.utils.file_upload import FileUploadService
+from app.utils.email_service import email_service
 from datetime import datetime, date
 from app.utils.auth_utils import get_current_user
 
@@ -67,9 +68,19 @@ def submit_attendance_proof(od_id):
         od_request.proof_submission_status = ProofStatus.ATTENDANCE_SUBMITTED
         od_request.updated_at = datetime.utcnow()
         
+        # Set certificate submission deadline
+        od_request.set_certificate_deadline()
+        
         db.session.commit()
         
-        # TODO: Send notification emails
+        # Send confirmation email
+        try:
+            faculty = Faculty.query.get(od_request.faculty_id)
+            if faculty:
+                email_service.send_proof_submission_confirmation(user, faculty, od_request, 'attendance')
+        except Exception as e:
+            # Log email error but don't fail the request
+            print(f"Failed to send confirmation email: {str(e)}")
         
         return jsonify({
             'message': 'Attendance proof submitted successfully',
@@ -156,7 +167,14 @@ def submit_certificate(od_id):
         
         db.session.commit()
         
-        # TODO: Send notification emails
+        # Send confirmation email
+        try:
+            faculty = Faculty.query.get(od_request.faculty_id)
+            if faculty:
+                email_service.send_proof_submission_confirmation(user, faculty, od_request, 'certificate')
+        except Exception as e:
+            # Log email error but don't fail the request
+            print(f"Failed to send confirmation email: {str(e)}")
         
         return jsonify({
             'message': 'Certificate submitted successfully',

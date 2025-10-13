@@ -10,7 +10,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import Header from './components/common/Header';
 import LoginForm from './components/auth/LoginForm';
 import StudentDashboard from './components/student/StudentDashboard';
+import ProofSubmission from './components/student/ProofSubmission';
 import FacultyDashboard from './components/faculty/FacultyDashboard';
+import DebugPage from './components/debug/DebugPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -65,6 +67,16 @@ function AppRoutes() {
           } 
         />
 
+        {/* Student Proof Submission */}
+        <Route 
+          path="/student/proofs" 
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <ProofSubmission />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Faculty Dashboard */}
         <Route 
           path="/faculty" 
@@ -73,6 +85,12 @@ function AppRoutes() {
               <FacultyDashboard />
             </ProtectedRoute>
           } 
+        />
+
+        {/* Debug Page */}
+        <Route 
+          path="/debug" 
+          element={<DebugPage />} 
         />
 
         {/* 404 Route */}

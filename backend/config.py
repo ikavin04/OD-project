@@ -7,7 +7,7 @@ class Config:
     
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:Kavin04@localhost/OD'
+        'postgresql://postgres:Manisha14@localhost:5432/OD'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
@@ -44,12 +44,12 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'postgresql://postgres:Kavin04@localhost/OD'
+        'postgresql://postgres:Manisha14@localhost:5432/OD'
 
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-        'postgresql://postgres:Kavin04@localhost/OD_test'
+        'postgresql://postgres:Manisha14@localhost:5432/OD'
     WTF_CSRF_ENABLED = False
 
 class ProductionConfig(Config):

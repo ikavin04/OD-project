@@ -162,6 +162,9 @@ def approve_od_request(od_id):
         od_request.approved_at = datetime.now(timezone.utc)
         od_request.updated_at = datetime.now(timezone.utc)
         
+        # Set proof submission deadlines
+        od_request.set_approval_deadlines()
+        
         db.session.commit()
         
         # TODO: Send approval email notification to student
