@@ -1053,13 +1053,33 @@ def view_od_application_file(request_id, file_type):
     """View OD application file (for frontend compatibility)"""
     od_request = ODRequest.query.get_or_404(request_id)
     
-    # Check if file exists
-    if not od_request.application_file_path or not os.path.exists(od_request.application_file_path):
+    # Check if file exists - try multiple paths
+    file_path = None
+    if od_request.application_file_path:
+        # Try the stored path first
+        if os.path.exists(od_request.application_file_path):
+            file_path = od_request.application_file_path
+        else:
+            # Try absolute path
+            abs_path = os.path.abspath(od_request.application_file_path)
+            if os.path.exists(abs_path):
+                file_path = abs_path
+            # Try with od-applications subfolder
+            elif os.path.exists(os.path.join('uploads', 'od-applications', od_request.application_filename)):
+                file_path = os.path.join('uploads', 'od-applications', od_request.application_filename)
+            # Try uploads root with just filename
+            elif os.path.exists(os.path.join('uploads', od_request.application_filename)):
+                file_path = os.path.join('uploads', od_request.application_filename)
+    
+    if not file_path:
+        print(f"File not found for OD request {request_id}")
+        print(f"  Stored path: {od_request.application_file_path}")
+        print(f"  Filename: {od_request.application_filename}")
         return jsonify({'error': 'File not found'}), 404
     
     try:
         return send_file(
-            od_request.application_file_path,
+            file_path,
             as_attachment=False,
             download_name=od_request.application_original_name,
             mimetype=od_request.application_mime_type or 'application/octet-stream'
@@ -1074,13 +1094,33 @@ def download_od_application_file(request_id, file_type):
     """Download OD application file (for frontend compatibility)"""
     od_request = ODRequest.query.get_or_404(request_id)
     
-    # Check if file exists
-    if not od_request.application_file_path or not os.path.exists(od_request.application_file_path):
+    # Check if file exists - try multiple paths
+    file_path = None
+    if od_request.application_file_path:
+        # Try the stored path first
+        if os.path.exists(od_request.application_file_path):
+            file_path = od_request.application_file_path
+        else:
+            # Try absolute path
+            abs_path = os.path.abspath(od_request.application_file_path)
+            if os.path.exists(abs_path):
+                file_path = abs_path
+            # Try with od-applications subfolder
+            elif os.path.exists(os.path.join('uploads', 'od-applications', od_request.application_filename)):
+                file_path = os.path.join('uploads', 'od-applications', od_request.application_filename)
+            # Try uploads root with just filename
+            elif os.path.exists(os.path.join('uploads', od_request.application_filename)):
+                file_path = os.path.join('uploads', od_request.application_filename)
+    
+    if not file_path:
+        print(f"File not found for OD request {request_id}")
+        print(f"  Stored path: {od_request.application_file_path}")
+        print(f"  Filename: {od_request.application_filename}")
         return jsonify({'error': 'File not found'}), 404
     
     try:
         return send_file(
-            od_request.application_file_path,
+            file_path,
             as_attachment=True,
             download_name=od_request.application_original_name,
             mimetype=od_request.application_mime_type or 'application/octet-stream'
