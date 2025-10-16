@@ -20,8 +20,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      
       if (token) {
         console.log('Token found in localStorage, verifying with server...');
+        
+        // First, set user from localStorage for immediate UI update
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            setUser(parsedUser);
+            console.log('✅ User loaded from localStorage:', parsedUser);
+          } catch (error) {
+            console.log('❌ Failed to parse saved user data');
+          }
+        }
         
         try {
           // Set the token in axios headers before making request
@@ -31,12 +44,16 @@ export const AuthProvider = ({ children }) => {
           const response = await api.get('/auth/me');
           if (response.data.user) {
             setUser(response.data.user);
-            console.log('✅ Token verified, user set:', response.data.user);
+            // Update localStorage with fresh user data
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            console.log('✅ Token verified, user updated:', response.data.user);
           }
         } catch (error) {
           console.log('❌ Token verification failed, removing token:', error.response?.data || error.message);
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
           delete api.defaults.headers.common['Authorization'];
+          setUser(null);
         }
       } else {
         console.log('No token found in localStorage');
@@ -60,14 +77,15 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid response from server');
       }
 
-      // Store token and set axios header
+      // Store token and user data in localStorage
       localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
       api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       // Set user state
       setUser(userData);
       
-      console.log('✅ Login successful, user set:', userData);
+      console.log('✅ Login successful, user set and saved:', userData);
       return { success: true, user: userData };
       
     } catch (error) {
@@ -82,6 +100,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     console.log('🚪 Logging out user');
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };

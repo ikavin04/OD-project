@@ -8,6 +8,7 @@ const LoginForm = () => {
   const [userType, setUserType] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true for persistent login
   const [formData, setFormData] = useState({
     email: '',
     rollNumber: '',
@@ -229,6 +230,21 @@ const LoginForm = () => {
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+                Keep me logged in
+              </label>
             </div>
           </div>
 
