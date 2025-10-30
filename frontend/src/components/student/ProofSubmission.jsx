@@ -26,8 +26,12 @@ function ProofSubmission() {
 
   const fetchApprovedODRequests = async () => {
     try {
-      const response = await api.get('/od/my-requests?status=approved');
-      setOdRequests(response.data.od_requests || []);
+      const response = await api.get('/od-requests');
+      // Filter for approved requests only
+      const approvedRequests = (response.data.od_requests || []).filter(
+        req => req.status === 'approved'
+      );
+      setOdRequests(approvedRequests);
     } catch (error) {
       console.error('Failed to fetch approved OD requests:', error);
       toast.error('Failed to load OD requests');
@@ -72,8 +76,8 @@ function ProofSubmission() {
       formData.append(proofType === 'attendance' ? 'attendance_proof' : 'certificate', file);
 
       const endpoint = proofType === 'attendance' 
-        ? `/proof/${odId}/attendance` 
-        : `/proof/${odId}/certificate`;
+        ? `/od-requests/${odId}/submit-attendance-proof` 
+        : `/od-requests/${odId}/submit-certificate`;
 
       await api.post(endpoint, formData, {
         headers: {

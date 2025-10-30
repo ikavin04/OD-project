@@ -120,8 +120,11 @@ function StudentDashboard() {
 
   const fetchPendingProofs = async () => {
     try {
-      const response = await api.get('/od/my-requests?status=approved');
-      const approvedRequests = response.data.od_requests || [];
+      const response = await api.get('/od-requests');
+      // Filter for approved requests only
+      const approvedRequests = (response.data.od_requests || []).filter(
+        req => req.status === 'approved'
+      );
       
       // Filter for requests that need proof submission
       const needingProofs = approvedRequests.filter(request => {
