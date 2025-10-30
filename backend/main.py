@@ -1167,16 +1167,20 @@ def submit_attendance_proof(request_id):
     if od_request.student_id != user_id:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if request is approved and in attendance pending status
+    # Check if request is approved
     if od_request.status != ODStatus.APPROVED:
         return jsonify({'error': 'OD request must be approved first'}), 400
     
-    if od_request.proof_submission_status != ProofStatus.attendance_pending:
-        return jsonify({'error': 'Attendance proof submission not required or already submitted'}), 400
+    # Check if attendance proof is already submitted
+    if od_request.attendance_proof_filename:
+        return jsonify({'error': 'Attendance proof already submitted'}), 400
     
-    # Check if deadline has passed
-    if datetime.now(timezone.utc) > od_request.attendance_proof_deadline:
-        return jsonify({'error': 'Attendance proof submission deadline has passed'}), 400
+    # Set default status if not set
+    if od_request.proof_submission_status == ProofStatus.NOT_SUBMITTED:
+        od_request.proof_submission_status = ProofStatus.attendance_pending
+        # Set deadline if not set
+        if not od_request.attendance_proof_deadline:
+            od_request.attendance_proof_deadline = datetime.now(timezone.utc) + timedelta(days=3)
     
     # Get uploaded file
     file = request.files.get('attendance_proof')
@@ -1227,13 +1231,17 @@ def submit_certificate(request_id):
     if od_request.student_id != user_id:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if request is in certificate pending status
-    if od_request.proof_submission_status != ProofStatus.certificate_pending:
-        return jsonify({'error': 'Certificate submission not required or already submitted'}), 400
+    # Check if request is approved
+    if od_request.status != ODStatus.APPROVED:
+        return jsonify({'error': 'OD request must be approved first'}), 400
     
-    # Check if deadline has passed
-    if datetime.now(timezone.utc) > od_request.certificate_deadline:
-        return jsonify({'error': 'Certificate submission deadline has passed'}), 400
+    # Check if attendance proof is submitted
+    if not od_request.attendance_proof_filename:
+        return jsonify({'error': 'Please submit attendance proof first'}), 400
+    
+    # Check if certificate is already submitted
+    if od_request.certificate_filename:
+        return jsonify({'error': 'Certificate already submitted'}), 400
     
     # Get uploaded file
     file = request.files.get('certificate')
