@@ -26,7 +26,7 @@ class ODRequest(db.Model):
     # Application File
     application_filename = db.Column(db.String(255), nullable=False)
     application_original_name = db.Column(db.String(255), nullable=False)
-    application_file_path = db.Column(db.String(500), nullable=False)
+    application_file_path = db.Column(db.String(500))  # Optional - for legacy/file system storage
     application_file_data = db.Column(db.LargeBinary)  # BYTEA for PostgreSQL
     application_file_size = db.Column(db.Integer)
     application_mime_type = db.Column(db.String(100))
