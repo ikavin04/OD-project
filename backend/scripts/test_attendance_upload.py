@@ -90,6 +90,12 @@ def verify_list(token):
         else:
             print(f"OD {item['id']} has no attendance_proof")
 
+def test_view_endpoints(od_id, token):
+    headers = {"Authorization": f"Bearer {token}"}
+    for kind in ["application", "attendance_proof", "certificate"]:
+        r = requests.get(f"{BASE_URL}/od/view/{od_id}/{kind}", headers=headers, timeout=10)
+        print(f"View {kind} status:", r.status_code, "content-type:", r.headers.get("content-type"))
+
 
 if __name__ == "__main__":
     print("Logging in as test student...")

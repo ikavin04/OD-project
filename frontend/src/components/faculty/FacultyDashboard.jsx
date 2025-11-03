@@ -85,6 +85,72 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
   );
 };
 
+// Generic authenticated document preview (PDF iframe fallback)
+const AuthenticatedDocument = ({ requestId, fileType, className, onClick }) => {
+  const [src, setSrc] = useState(null);
+  const [mime, setMime] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadDoc = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await api.get(`/od/view/${requestId}/${fileType}`, {
+          responseType: 'blob',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const contentType = response.headers['content-type'] || 'application/octet-stream';
+        setMime(contentType);
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: contentType }));
+        setSrc(url);
+        setLoading(false);
+      } catch (e) {
+        console.error('Failed to load document:', e);
+        setError(true);
+        setLoading(false);
+      }
+    };
+    loadDoc();
+    return () => {
+      if (src) window.URL.revokeObjectURL(src);
+    };
+  }, [requestId, fileType]);
+
+  if (loading) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-gray-100`}>
+        <div className="text-sm text-gray-500">Loading document...</div>
+      </div>
+    );
+  }
+  if (error || !src) {
+    return (
+      <div className={`${className} flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4`}>
+        <FileText className="h-12 w-12 text-gray-400 mb-2" />
+        <div className="text-sm text-gray-600 font-medium">Document not available</div>
+      </div>
+    );
+  }
+
+  if (mime && mime.startsWith('application/pdf')) {
+    return (
+      <iframe
+        src={src}
+        className={className}
+        title="Document Preview"
+      />
+    );
+  }
+
+  // Fallback to image rendering
+  return (
+    <img src={src} className={className} onClick={onClick} alt="Document" />
+  );
+};
+
 const FacultyDashboard = () => {
   const { user } = useAuth();
   const [odRequests, setOdRequests] = useState([]);
@@ -627,19 +693,29 @@ const FacultyDashboard = () => {
                         </div>
                         
                         {/* Certificate Preview */}
-                        {selectedRequest.certificate.mime_type?.startsWith('image/') && (
+                        {selectedRequest.certificate && (
                           <div className="bg-white rounded-lg border-2 border-purple-300 p-4">
                             <div className="text-center mb-2">
                               <h5 className="text-sm font-semibold text-gray-900">Certificate Preview</h5>
                             </div>
                             <div className="flex justify-center">
-                              <AuthenticatedImage
-                                requestId={selectedRequest.id}
-                                fileType="certificate"
-                                alt="Participation Certificate"
-                                className="max-w-full h-auto max-h-[400px] border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
-                                onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
-                              />
+                              {selectedRequest.certificate.mime_type?.startsWith('image/') ? (
+                                <AuthenticatedImage
+                                  requestId={selectedRequest.id}
+                                  fileType="certificate"
+                                  alt="Participation Certificate"
+                                  className="max-w-full h-auto max-h-[400px] border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                                  onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
+                                />
+                              ) : selectedRequest.certificate.mime_type === 'application/pdf' ? (
+                                <AuthenticatedDocument
+                                  requestId={selectedRequest.id}
+                                  fileType="certificate"
+                                  className="w-full h-[500px] border-2 border-gray-300 rounded-lg shadow-md"
+                                />
+                              ) : (
+                                <div className="text-sm text-gray-600">Preview not available for this file type. Use the View button.</div>
+                              )}
                             </div>
                             <div className="mt-2 text-center">
                               <p className="text-xs text-gray-500">👆 Click to view in full size</p>
