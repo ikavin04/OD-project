@@ -304,6 +304,15 @@ class ODRequest(db.Model):
                 'has_file_data': True,  # Indicate file is stored in database
                 'file_id': self.id  # Use for download endpoint
             }
+        # Frontend compatibility alias
+        attendance_proof = None
+        if attendance_proof_file:
+            attendance_proof = {
+                'filename': attendance_proof_file['filename'],
+                'size': attendance_proof_file['size'],
+                'mime_type': attendance_proof_file['mime_type'],
+                'uploaded_at': self.attendance_proof_submitted_at.isoformat() if self.attendance_proof_submitted_at else None
+            }
         
         # Create certificate file object if file exists in database
         certificate_file = None
@@ -315,8 +324,17 @@ class ODRequest(db.Model):
                 'has_file_data': True,  # Indicate file is stored in database
                 'file_id': self.id  # Use for download endpoint
             }
+        # Frontend compatibility alias
+        certificate = None
+        if certificate_file:
+            certificate = {
+                'filename': certificate_file['filename'],
+                'size': certificate_file['size'],
+                'mime_type': certificate_file['mime_type'],
+                'uploaded_at': self.certificate_submitted_at.isoformat() if self.certificate_submitted_at else None
+            }
         
-        return {
+        data = {
             'id': self.id,
             'student_id': self.student_id,
             'faculty_id': self.faculty_id,
@@ -346,6 +364,15 @@ class ODRequest(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'student': self.student.to_dict() if self.student else None
         }
+
+        # Add compatibility fields used by the current frontend
+        data['attendance_proof'] = attendance_proof
+        data['certificate'] = certificate
+        data['deadlines'] = {
+            'attendance_proof_deadline': data['attendance_proof_deadline'],
+            'certificate_deadline': data['certificate_deadline']
+        }
+        return data
 
 # ============================================================================
 # EMAIL SERVICE
