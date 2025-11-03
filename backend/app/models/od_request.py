@@ -27,6 +27,7 @@ class ODRequest(db.Model):
     application_filename = db.Column(db.String(255), nullable=False)
     application_original_name = db.Column(db.String(255), nullable=False)
     application_file_path = db.Column(db.String(500), nullable=False)
+    application_file_data = db.Column(db.LargeBinary)  # BYTEA for PostgreSQL
     application_file_size = db.Column(db.Integer)
     application_mime_type = db.Column(db.String(100))
     application_file_hash = db.Column(db.String(64), unique=True)
@@ -47,6 +48,7 @@ class ODRequest(db.Model):
     attendance_proof_filename = db.Column(db.String(255))
     attendance_proof_original_name = db.Column(db.String(255))
     attendance_proof_file_path = db.Column(db.String(500))
+    attendance_proof_file_data = db.Column(db.LargeBinary)  # BYTEA for PostgreSQL
     attendance_proof_file_size = db.Column(db.Integer)
     attendance_proof_mime_type = db.Column(db.String(100))
     attendance_proof_file_hash = db.Column(db.String(64))
@@ -56,6 +58,7 @@ class ODRequest(db.Model):
     certificate_filename = db.Column(db.String(255))
     certificate_original_name = db.Column(db.String(255))
     certificate_file_path = db.Column(db.String(500))
+    certificate_file_data = db.Column(db.LargeBinary)  # BYTEA for PostgreSQL
     certificate_file_size = db.Column(db.Integer)
     certificate_mime_type = db.Column(db.String(100))
     certificate_file_hash = db.Column(db.String(64))
