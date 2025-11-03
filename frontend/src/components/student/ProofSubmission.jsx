@@ -31,6 +31,8 @@ function ProofSubmission() {
       const approvedRequests = (response.data.od_requests || []).filter(
         req => req.status === 'approved'
       );
+      // Debug: inspect whether attendance_proof is present
+      console.log('ProofSubmission: fetched approved requests =', approvedRequests.map(r => ({ id: r.id, attendance_proof: !!r.attendance_proof, filename: r.attendance_proof?.filename })));
       setOdRequests(approvedRequests);
     } catch (error) {
       console.error('Failed to fetch approved OD requests:', error);
@@ -79,14 +81,21 @@ function ProofSubmission() {
         ? `/od-requests/${odId}/submit-attendance-proof` 
         : `/od-requests/${odId}/submit-certificate`;
 
-      await api.post(endpoint, formData, {
+      const { data } = await api.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
+      console.log('ProofSubmission: submit result =', { id: data?.od_request?.id, attendance_proof: data?.od_request?.attendance_proof });
+
       toast.success(`${proofType === 'attendance' ? 'Attendance proof' : 'Certificate'} submitted successfully!`);
       
+      // Update the specific OD request in-place using API response (instant UI)
+      if (data && data.od_request) {
+        setOdRequests(prev => prev.map(od => od.id === data.od_request.id ? data.od_request : od));
+      }
+
       // Clear selected file
       setSelectedFiles(prev => {
         const updated = { ...prev };
