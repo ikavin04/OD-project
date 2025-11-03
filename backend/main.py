@@ -14,7 +14,7 @@ from datetime import datetime, date, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
 # Flask and extensions
-from flask import Flask, request, jsonify, send_file, abort
+from flask import Flask, request, jsonify, send_file, abort, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token, get_jwt
 from flask_cors import CORS
@@ -242,10 +242,10 @@ class ODRequest(db.Model):
     venue = db.Column(db.String(200))
     location_type = db.Column(db.String(50))  # within_state or out_of_state
     
-    # Application File
+    # Application File - Stored in Database
     application_filename = db.Column(db.String(255), nullable=False)
     application_original_name = db.Column(db.String(255), nullable=False)
-    application_file_path = db.Column(db.String(500), nullable=False)
+    application_file_data = db.Column(db.LargeBinary, nullable=False)  # Store actual file in DB
     application_file_size = db.Column(db.Integer)
     application_mime_type = db.Column(db.String(100))
     application_file_hash = db.Column(db.String(64), unique=True)
@@ -262,18 +262,18 @@ class ODRequest(db.Model):
     attendance_proof_deadline = db.Column(db.DateTime(timezone=True))  # 3 days after approval
     certificate_deadline = db.Column(db.DateTime(timezone=True))  # 1 month after attendance submission
     
-    # Attendance proof file (event brochure/live photo within 3 days)
+    # Attendance proof file - Stored in Database
     attendance_proof_filename = db.Column(db.String(255))
     attendance_proof_original_name = db.Column(db.String(255))
-    attendance_proof_file_path = db.Column(db.String(500))
+    attendance_proof_file_data = db.Column(db.LargeBinary)  # Store actual file in DB
     attendance_proof_file_size = db.Column(db.Integer)
     attendance_proof_mime_type = db.Column(db.String(100))
     attendance_proof_submitted_at = db.Column(db.DateTime(timezone=True))
     
-    # Certificate file (within 1 month after attendance)
+    # Certificate file - Stored in Database
     certificate_filename = db.Column(db.String(255))
     certificate_original_name = db.Column(db.String(255))
-    certificate_file_path = db.Column(db.String(500))
+    certificate_file_data = db.Column(db.LargeBinary)  # Store actual file in DB
     certificate_file_size = db.Column(db.Integer)
     certificate_mime_type = db.Column(db.String(100))
     certificate_submitted_at = db.Column(db.DateTime(timezone=True))
@@ -283,40 +283,37 @@ class ODRequest(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     
     def to_dict(self):
-        # Create application_file object if file exists
+        # Create application_file object if file exists in database
         application_file = None
-        if self.application_filename:
-            import mimetypes
-            mime_type, _ = mimetypes.guess_type(self.application_filename)
+        if self.application_filename and self.application_file_data:
             application_file = {
                 'filename': self.application_original_name or self.application_filename,
                 'size': self.application_file_size or 0,
-                'mime_type': mime_type or 'application/octet-stream',
-                'file_path': self.application_file_path
+                'mime_type': self.application_mime_type or 'application/octet-stream',
+                'has_file_data': True,  # Indicate file is stored in database
+                'file_id': self.id  # Use for download endpoint
             }
         
-        # Create attendance proof file object if file exists
+        # Create attendance proof file object if file exists in database
         attendance_proof_file = None
-        if self.attendance_proof_filename:
-            import mimetypes
-            mime_type, _ = mimetypes.guess_type(self.attendance_proof_filename)
+        if self.attendance_proof_filename and self.attendance_proof_file_data:
             attendance_proof_file = {
                 'filename': self.attendance_proof_original_name or self.attendance_proof_filename,
                 'size': self.attendance_proof_file_size or 0,
-                'mime_type': mime_type or 'application/octet-stream',
-                'file_path': self.attendance_proof_file_path
+                'mime_type': self.attendance_proof_mime_type or 'application/octet-stream',
+                'has_file_data': True,  # Indicate file is stored in database
+                'file_id': self.id  # Use for download endpoint
             }
         
-        # Create certificate file object if file exists
+        # Create certificate file object if file exists in database
         certificate_file = None
-        if self.certificate_filename:
-            import mimetypes
-            mime_type, _ = mimetypes.guess_type(self.certificate_filename)
+        if self.certificate_filename and self.certificate_file_data:
             certificate_file = {
                 'filename': self.certificate_original_name or self.certificate_filename,
                 'size': self.certificate_file_size or 0,
-                'mime_type': mime_type or 'application/octet-stream',
-                'file_path': self.certificate_file_path
+                'mime_type': self.certificate_mime_type or 'application/octet-stream',
+                'has_file_data': True,  # Indicate file is stored in database
+                'file_id': self.id  # Use for download endpoint
             }
         
         return {
@@ -478,36 +475,37 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-def save_file(file, upload_folder="uploads"):
-    """Save uploaded file and return file info"""
+def save_file_to_database(file):
+    """Save uploaded file directly to database and return file info"""
     if not file or file.filename == '':
         return None
     
     if not allowed_file(file.filename):
         return None
     
-    # Generate unique filename
+    # Read file content
+    file_content = file.read()
+    file.seek(0)  # Reset file pointer for any other operations
+    
+    # Generate file hash for deduplication
+    file_hash = hashlib.sha256(file_content).hexdigest()
+    
+    # Generate secure filename
     filename = secure_filename(file.filename)
-    file_hash = hashlib.sha256(file.read()).hexdigest()
-    file.seek(0)  # Reset file pointer
-    
-    unique_filename = f"{file_hash}_{filename}"
-    filepath = os.path.join(upload_folder, unique_filename)
-    
-    # Ensure directory exists
-    os.makedirs(upload_folder, exist_ok=True)
-    
-    # Save file
-    file.save(filepath)
     
     return {
-        'filename': unique_filename,
+        'filename': f"{file_hash}_{filename}",
         'original_name': filename,
-        'file_path': filepath,
-        'file_size': os.path.getsize(filepath),
-        'mime_type': file.content_type,
+        'file_data': file_content,  # Binary data for database
+        'file_size': len(file_content),
+        'mime_type': file.content_type or 'application/octet-stream',
         'file_hash': file_hash
     }
+
+# Legacy function for backward compatibility (now redirects to database storage)
+def save_file(file, upload_folder="uploads"):
+    """Legacy function - now saves to database instead of file system"""
+    return save_file_to_database(file)
 
 # ============================================================================
 # AUTHENTICATION ROUTES
@@ -757,8 +755,8 @@ def create_od_request():
         if field not in data or not data[field]:
             return jsonify({'error': f'{field} is required'}), 400
     
-    # Save file
-    file_info = save_file(file)
+    # Save file to database
+    file_info = save_file_to_database(file)
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
@@ -776,7 +774,7 @@ def create_od_request():
         location_type=data.get('location_type'),
         application_filename=file_info['filename'],
         application_original_name=file_info['original_name'],
-        application_file_path=file_info['file_path'],
+        application_file_data=file_info['file_data'],  # Store binary data
         application_file_size=file_info['file_size'],
         application_mime_type=file_info['mime_type'],
         application_file_hash=file_info['file_hash']
@@ -1050,43 +1048,39 @@ def download_od_file(request_id):
 @app.route('/api/od/view/<int:request_id>/<string:file_type>')
 @jwt_required()
 def view_od_application_file(request_id, file_type):
-    """View OD application file (for frontend compatibility)"""
+    """View OD application file from database"""
     od_request = ODRequest.query.get_or_404(request_id)
     
-    # Check if file exists - try multiple paths
-    file_path = None
-    if od_request.application_file_path:
-        # Try the stored path first
-        if os.path.exists(od_request.application_file_path):
-            file_path = od_request.application_file_path
-        else:
-            # Try absolute path
-            abs_path = os.path.abspath(od_request.application_file_path)
-            if os.path.exists(abs_path):
-                file_path = abs_path
-            # Try with od-applications subfolder
-            elif os.path.exists(os.path.join('uploads', 'od-applications', od_request.application_filename)):
-                file_path = os.path.join('uploads', 'od-applications', od_request.application_filename)
-            # Try uploads root with just filename
-            elif os.path.exists(os.path.join('uploads', od_request.application_filename)):
-                file_path = os.path.join('uploads', od_request.application_filename)
-    
-    if not file_path:
-        print(f"File not found for OD request {request_id}")
-        print(f"  Stored path: {od_request.application_file_path}")
-        print(f"  Filename: {od_request.application_filename}")
-        return jsonify({'error': 'File not found'}), 404
-    
-    try:
-        return send_file(
-            file_path,
-            as_attachment=False,
-            download_name=od_request.application_original_name,
-            mimetype=od_request.application_mime_type or 'application/octet-stream'
+    # Serve file from database
+    if file_type == 'application' and od_request.application_file_data:
+        return Response(
+            od_request.application_file_data,
+            mimetype=od_request.application_mime_type or 'application/octet-stream',
+            headers={
+                'Content-Disposition': f'inline; filename="{od_request.application_original_name}"',
+                'Content-Length': str(len(od_request.application_file_data))
+            }
         )
-    except Exception as e:
-        print(f"Error serving file: {str(e)}")
-        return jsonify({'error': 'Failed to serve file'}), 500
+    elif file_type == 'attendance' and od_request.attendance_proof_file_data:
+        return Response(
+            od_request.attendance_proof_file_data,
+            mimetype=od_request.attendance_proof_mime_type or 'application/octet-stream',
+            headers={
+                'Content-Disposition': f'inline; filename="{od_request.attendance_proof_original_name}"',
+                'Content-Length': str(len(od_request.attendance_proof_file_data))
+            }
+        )
+    elif file_type == 'certificate' and od_request.certificate_file_data:
+        return Response(
+            od_request.certificate_file_data,
+            mimetype=od_request.certificate_mime_type or 'application/octet-stream',
+            headers={
+                'Content-Disposition': f'inline; filename="{od_request.certificate_original_name}"',
+                'Content-Length': str(len(od_request.certificate_file_data))
+            }
+        )
+    
+    return jsonify({'error': 'File not found in database'}), 404
 
 @app.route('/api/od/download/<int:request_id>/<string:file_type>')
 @jwt_required()
@@ -1187,15 +1181,15 @@ def submit_attendance_proof(request_id):
     if not file:
         return jsonify({'error': 'Attendance proof file is required'}), 400
     
-    # Save file
-    file_info = save_file(file)
+    # Save file to database
+    file_info = save_file_to_database(file)
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
     # Update OD request with attendance proof
     od_request.attendance_proof_filename = file_info['filename']
     od_request.attendance_proof_original_name = file_info['original_name']
-    od_request.attendance_proof_file_path = file_info['file_path']
+    od_request.attendance_proof_file_data = file_info['file_data']  # Store binary data
     od_request.attendance_proof_file_size = file_info['file_size']
     od_request.attendance_proof_mime_type = file_info['mime_type']
     od_request.attendance_proof_submitted_at = datetime.now(timezone.utc)
@@ -1248,15 +1242,15 @@ def submit_certificate(request_id):
     if not file:
         return jsonify({'error': 'Certificate file is required'}), 400
     
-    # Save file
-    file_info = save_file(file)
+    # Save file to database
+    file_info = save_file_to_database(file)
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
     # Update OD request with certificate
     od_request.certificate_filename = file_info['filename']
     od_request.certificate_original_name = file_info['original_name']
-    od_request.certificate_file_path = file_info['file_path']
+    od_request.certificate_file_data = file_info['file_data']  # Store binary data
     od_request.certificate_file_size = file_info['file_size']
     od_request.certificate_mime_type = file_info['mime_type']
     od_request.certificate_submitted_at = datetime.now(timezone.utc)
