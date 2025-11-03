@@ -50,7 +50,7 @@ class ODRequest(db.Model):
     attendance_proof_file_size = db.Column(db.Integer)
     attendance_proof_mime_type = db.Column(db.String(100))
     attendance_proof_file_hash = db.Column(db.String(64))
-    attendance_proof_uploaded_at = db.Column(db.DateTime(timezone=True))
+    attendance_proof_submitted_at = db.Column(db.DateTime(timezone=True))
     
     # Certificate
     certificate_filename = db.Column(db.String(255))
@@ -59,7 +59,7 @@ class ODRequest(db.Model):
     certificate_file_size = db.Column(db.Integer)
     certificate_mime_type = db.Column(db.String(100))
     certificate_file_hash = db.Column(db.String(64))
-    certificate_uploaded_at = db.Column(db.DateTime(timezone=True))
+    certificate_submitted_at = db.Column(db.DateTime(timezone=True))
     
     # OCR Validation (stored as JSON)
     ocr_validation_result = db.Column(db.Text)  # JSON string
@@ -120,14 +120,14 @@ class ODRequest(db.Model):
             'filename': self.attendance_proof_original_name,
             'size': self.attendance_proof_file_size,
             'mime_type': self.attendance_proof_mime_type,
-            'uploaded_at': self.attendance_proof_uploaded_at.isoformat() if self.attendance_proof_uploaded_at else None
+            'uploaded_at': self.attendance_proof_submitted_at.isoformat() if self.attendance_proof_submitted_at else None
         } if self.attendance_proof_filename else None
         
         data['certificate'] = {
             'filename': self.certificate_original_name,
             'size': self.certificate_file_size,
             'mime_type': self.certificate_mime_type,
-            'uploaded_at': self.certificate_uploaded_at.isoformat() if self.certificate_uploaded_at else None
+            'uploaded_at': self.certificate_submitted_at.isoformat() if self.certificate_submitted_at else None
         } if self.certificate_filename else None
         
         # Include deadline information
@@ -164,21 +164,21 @@ class ODRequest(db.Model):
     
     def set_certificate_deadline(self):
         """Set certificate deadline when attendance proof is submitted"""
-        if self.attendance_proof_uploaded_at:
+        if self.attendance_proof_submitted_at:
             # Certificate deadline: 1 month (30 days) after attendance proof submission
-            self.certificate_submission_deadline = self.attendance_proof_uploaded_at + timedelta(days=30)
+            self.certificate_submission_deadline = self.attendance_proof_submitted_at + timedelta(days=30)
     
     @property
     def is_attendance_proof_overdue(self):
         """Check if attendance proof submission is overdue"""
-        if not self.attendance_proof_deadline or self.attendance_proof_uploaded_at:
+        if not self.attendance_proof_deadline or self.attendance_proof_submitted_at:
             return False
         return datetime.now(timezone.utc) > self.attendance_proof_deadline
     
     @property
     def is_certificate_overdue(self):
         """Check if certificate submission is overdue"""
-        if not self.certificate_submission_deadline or self.certificate_uploaded_at:
+        if not self.certificate_submission_deadline or self.certificate_submitted_at:
             return False
         return datetime.now(timezone.utc) > self.certificate_submission_deadline
     
@@ -189,11 +189,11 @@ class ODRequest(db.Model):
             return False
         
         # If attendance proof not submitted and deadline passed
-        if not self.attendance_proof_uploaded_at and self.is_attendance_proof_overdue:
+        if not self.attendance_proof_submitted_at and self.is_attendance_proof_overdue:
             return True
         
         # If certificate not submitted and deadline passed
-        if self.attendance_proof_uploaded_at and not self.certificate_uploaded_at and self.is_certificate_overdue:
+        if self.attendance_proof_submitted_at and not self.certificate_submitted_at and self.is_certificate_overdue:
             return True
         
         return False
@@ -201,7 +201,7 @@ class ODRequest(db.Model):
     @property
     def days_until_attendance_deadline(self):
         """Get days remaining until attendance proof deadline"""
-        if not self.attendance_proof_deadline or self.attendance_proof_uploaded_at:
+        if not self.attendance_proof_deadline or self.attendance_proof_submitted_at:
             return None
         
         delta = self.attendance_proof_deadline - datetime.now(timezone.utc)
@@ -210,7 +210,7 @@ class ODRequest(db.Model):
     @property
     def days_until_certificate_deadline(self):
         """Get days remaining until certificate deadline"""
-        if not self.certificate_submission_deadline or self.certificate_uploaded_at:
+        if not self.certificate_submission_deadline or self.certificate_submitted_at:
             return None
         
         delta = self.certificate_submission_deadline - datetime.now(timezone.utc)
