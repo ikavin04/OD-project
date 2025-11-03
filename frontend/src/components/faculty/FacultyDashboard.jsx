@@ -94,6 +94,7 @@ const FacultyDashboard = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     fetchODRequests();
@@ -512,6 +513,160 @@ const FacultyDashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* Proof Submissions Section */}
+              {selectedRequest.status === 'approved' && (
+                <div className="border-b border-gray-200 pb-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">📋 Proof Submissions</h3>
+                  <div className="text-sm text-gray-600 mb-4">
+                    Status: <span className="font-semibold text-blue-600">
+                      {selectedRequest.proof_submission_status === 'not_submitted' ? 'Not Submitted' :
+                       selectedRequest.proof_submission_status === 'attendance_pending' ? 'Awaiting Attendance Proof' :
+                       selectedRequest.proof_submission_status === 'certificate_pending' ? 'Awaiting Certificate' :
+                       selectedRequest.proof_submission_status === 'completed' ? 'All Proofs Submitted' :
+                       selectedRequest.proof_submission_status}
+                    </span>
+                  </div>
+
+                  {/* Attendance Proof */}
+                  <div className="mb-6">
+                    <h4 className="text-md font-semibold text-gray-800 mb-2 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                      Attendance Proof
+                    </h4>
+                    {selectedRequest.attendance_proof ? (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-green-800">✅ Submitted</p>
+                              <p className="text-xs text-green-600">
+                                {selectedRequest.attendance_proof.uploaded_at && 
+                                  `Uploaded: ${format(new Date(selectedRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy hh:mm a')}`}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                File: {selectedRequest.attendance_proof.filename}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleViewFile(selectedRequest.id, 'attendance_proof')}
+                              className="btn-secondary flex items-center text-sm"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Attendance Proof Preview */}
+                        {selectedRequest.attendance_proof.mime_type?.startsWith('image/') && (
+                          <div className="bg-white rounded-lg border-2 border-green-300 p-4">
+                            <div className="text-center mb-2">
+                              <h5 className="text-sm font-semibold text-gray-900">Attendance Proof Preview</h5>
+                            </div>
+                            <div className="flex justify-center">
+                              <AuthenticatedImage
+                                requestId={selectedRequest.id}
+                                fileType="attendance_proof"
+                                alt="Attendance Proof"
+                                className="max-w-full h-auto max-h-[400px] border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => handleViewFile(selectedRequest.id, 'attendance_proof')}
+                              />
+                            </div>
+                            <div className="mt-2 text-center">
+                              <p className="text-xs text-gray-500">👆 Click to view in full size</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3">
+                        <div className="flex items-center">
+                          <Clock className="h-5 w-5 text-yellow-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-medium text-yellow-800">Pending</p>
+                            <p className="text-xs text-yellow-700">
+                              {selectedRequest.deadlines?.attendance_proof_deadline
+                                ? `Deadline: ${format(new Date(selectedRequest.deadlines.attendance_proof_deadline), 'MMM dd, yyyy')}`
+                                : 'Student has not submitted attendance proof yet'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Certificate */}
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-2 flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-purple-600" />
+                      Participation Certificate
+                    </h4>
+                    {selectedRequest.certificate ? (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-green-800">✅ Submitted</p>
+                              <p className="text-xs text-green-600">
+                                {selectedRequest.certificate.uploaded_at && 
+                                  `Uploaded: ${format(new Date(selectedRequest.certificate.uploaded_at), 'MMM dd, yyyy hh:mm a')}`}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                File: {selectedRequest.certificate.filename}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
+                              className="btn-secondary flex items-center text-sm"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Certificate Preview */}
+                        {selectedRequest.certificate.mime_type?.startsWith('image/') && (
+                          <div className="bg-white rounded-lg border-2 border-purple-300 p-4">
+                            <div className="text-center mb-2">
+                              <h5 className="text-sm font-semibold text-gray-900">Certificate Preview</h5>
+                            </div>
+                            <div className="flex justify-center">
+                              <AuthenticatedImage
+                                requestId={selectedRequest.id}
+                                fileType="certificate"
+                                alt="Participation Certificate"
+                                className="max-w-full h-auto max-h-[400px] border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                                onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
+                              />
+                            </div>
+                            <div className="mt-2 text-center">
+                              <p className="text-xs text-gray-500">👆 Click to view in full size</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center">
+                          <Clock className="h-5 w-5 text-gray-500 mr-2" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Not Yet Submitted</p>
+                            <p className="text-xs text-gray-600">
+                              {selectedRequest.attendance_proof 
+                                ? selectedRequest.deadlines?.certificate_deadline
+                                  ? `Deadline: ${format(new Date(selectedRequest.deadlines.certificate_deadline), 'MMM dd, yyyy')}`
+                                  : 'Awaiting certificate submission'
+                                : 'Certificate can be submitted after attendance proof'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               {selectedRequest.status === 'pending' && (
