@@ -270,14 +270,25 @@ function ProofSubmission() {
                     </p>
 
                     {odRequest.attendance_proof ? (
-                      <div className="flex items-center space-x-2 text-green-600">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Submitted: {odRequest.attendance_proof.filename}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ({format(new Date(odRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy')})
-                        </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center space-x-2 text-green-600">
+                          <CheckCircle className="h-5 w-5" />
+                          <span className="text-sm font-medium">
+                            Submitted: {odRequest.attendance_proof.filename}
+                          </span>
+                          {odRequest.attendance_proof.uploaded_at && (
+                            <span className="text-xs text-gray-500">
+                              ({format(new Date(odRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy')})
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="btn-secondary text-sm cursor-default"
+                        >
+                          Attendance Proof Submitted
+                        </button>
                       </div>
                     ) : (
                       <div className="space-y-3">

@@ -119,19 +119,31 @@ class ODRequest(db.Model):
             'mime_type': self.application_mime_type
         } if self.application_filename else None
         
+        has_attendance_proof = any([
+            self.attendance_proof_filename,
+            self.attendance_proof_original_name,
+            self.attendance_proof_file_data
+        ])
+
         data['attendance_proof'] = {
             'filename': self.attendance_proof_original_name,
             'size': self.attendance_proof_file_size,
             'mime_type': self.attendance_proof_mime_type,
             'uploaded_at': self.attendance_proof_submitted_at.isoformat() if self.attendance_proof_submitted_at else None
-        } if self.attendance_proof_filename else None
+        } if has_attendance_proof else None
         
+        has_certificate = any([
+            self.certificate_filename,
+            self.certificate_original_name,
+            self.certificate_file_data
+        ])
+
         data['certificate'] = {
             'filename': self.certificate_original_name,
             'size': self.certificate_file_size,
             'mime_type': self.certificate_mime_type,
             'uploaded_at': self.certificate_submitted_at.isoformat() if self.certificate_submitted_at else None
-        } if self.certificate_filename else None
+        } if has_certificate else None
         
         # Include deadline information
         data['deadlines'] = {

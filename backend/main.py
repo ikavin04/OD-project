@@ -806,6 +806,10 @@ def get_od_requests():
         # Faculty/Admin see all requests
         od_requests = ODRequest.query.all()
     
+    # Refresh all objects to ensure we have latest data
+    for od in od_requests:
+        db.session.refresh(od)
+    
     return jsonify({
         'od_requests': [od.to_dict() for od in od_requests]
     }), 200
@@ -841,6 +845,10 @@ def get_student_od_requests():
     
     # Students see only their own requests
     od_requests = ODRequest.query.filter_by(student_id=user_id).all()
+    
+    # Refresh to ensure latest values
+    for od in od_requests:
+        db.session.refresh(od)
     
     return jsonify({
         'od_requests': [od.to_dict() for od in od_requests]
@@ -1061,7 +1069,7 @@ def view_od_application_file(request_id, file_type):
                 'Content-Length': str(len(od_request.application_file_data))
             }
         )
-    elif file_type == 'attendance' and od_request.attendance_proof_file_data:
+    elif file_type in ['attendance', 'attendance_proof'] and od_request.attendance_proof_file_data:
         return Response(
             od_request.attendance_proof_file_data,
             mimetype=od_request.attendance_proof_mime_type or 'application/octet-stream',
@@ -1166,8 +1174,19 @@ def submit_attendance_proof(request_id):
         return jsonify({'error': 'OD request must be approved first'}), 400
     
     # Check if attendance proof is already submitted
-    if od_request.attendance_proof_filename:
-        return jsonify({'error': 'Attendance proof already submitted'}), 400
+    existing_attendance_proof = any([
+        od_request.attendance_proof_filename,
+        od_request.attendance_proof_original_name,
+        od_request.attendance_proof_file_data,
+        od_request.attendance_proof_submitted_at
+    ])
+
+    if existing_attendance_proof:
+        db.session.refresh(od_request)
+        return jsonify({
+            'message': 'Attendance proof already submitted',
+            'od_request': od_request.to_dict()
+        }), 200
     
     # Set default status if not set
     if od_request.proof_submission_status == ProofStatus.NOT_SUBMITTED:
@@ -1196,10 +1215,11 @@ def submit_attendance_proof(request_id):
     
     # Update status and set certificate deadline (1 month from now)
     od_request.proof_submission_status = ProofStatus.certificate_pending
-    od_request.certificate_deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    od_request.certificate_submission_deadline = datetime.now(timezone.utc) + timedelta(days=30)
     
     try:
         db.session.commit()
+        db.session.refresh(od_request)
         
         return jsonify({
             'message': 'Attendance proof submitted successfully. Please submit participation certificate within 1 month.',
@@ -1284,23 +1304,21 @@ def view_attendance_proof(request_id):
     elif claims['role'] not in ['student', 'faculty', 'hod', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if file exists
-    if not od_request.attendance_proof_filename:
+    # Check if file exists in database
+    if not od_request.attendance_proof_file_data:
         return jsonify({'error': 'Attendance proof not found'}), 404
     
     try:
-        file_path = od_request.attendance_proof_file_path
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found on server'}), 404
-        
+        # Serve file from database
+        from io import BytesIO
         return send_file(
-            file_path,
+            BytesIO(od_request.attendance_proof_file_data),
+            mimetype=od_request.attendance_proof_mime_type,
             as_attachment=False,
-            download_name=od_request.attendance_proof_original_name,
-            mimetype=od_request.attendance_proof_mime_type
+            download_name=od_request.attendance_proof_original_name
         )
     except Exception as e:
-        return jsonify({'error': 'Failed to retrieve file'}), 500
+        return jsonify({'error': f'Failed to retrieve file: {str(e)}'}), 500
 
 @app.route('/api/od/<int:request_id>/download-attendance-proof', methods=['GET'])
 @jwt_required()
@@ -1316,23 +1334,21 @@ def download_attendance_proof(request_id):
     elif claims['role'] not in ['student', 'faculty', 'hod', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if file exists
-    if not od_request.attendance_proof_filename:
+    # Check if file exists in database
+    if not od_request.attendance_proof_file_data:
         return jsonify({'error': 'Attendance proof not found'}), 404
     
     try:
-        file_path = od_request.attendance_proof_file_path
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found on server'}), 404
-        
+        # Serve file from database
+        from io import BytesIO
         return send_file(
-            file_path,
+            BytesIO(od_request.attendance_proof_file_data),
+            mimetype=od_request.attendance_proof_mime_type,
             as_attachment=True,
-            download_name=od_request.attendance_proof_original_name,
-            mimetype=od_request.attendance_proof_mime_type
+            download_name=od_request.attendance_proof_original_name
         )
     except Exception as e:
-        return jsonify({'error': 'Failed to download file'}), 500
+        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
 
 @app.route('/api/od/<int:request_id>/view-certificate', methods=['GET'])
 @jwt_required()
@@ -1348,23 +1364,21 @@ def view_certificate(request_id):
     elif claims['role'] not in ['student', 'faculty', 'hod', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if file exists
-    if not od_request.certificate_filename:
+    # Check if file exists in database
+    if not od_request.certificate_file_data:
         return jsonify({'error': 'Certificate not found'}), 404
     
     try:
-        file_path = od_request.certificate_file_path
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found on server'}), 404
-        
+        # Serve file from database
+        from io import BytesIO
         return send_file(
-            file_path,
+            BytesIO(od_request.certificate_file_data),
+            mimetype=od_request.certificate_mime_type,
             as_attachment=False,
-            download_name=od_request.certificate_original_name,
-            mimetype=od_request.certificate_mime_type
+            download_name=od_request.certificate_original_name
         )
     except Exception as e:
-        return jsonify({'error': 'Failed to retrieve file'}), 500
+        return jsonify({'error': f'Failed to retrieve file: {str(e)}'}), 500
 
 @app.route('/api/od/<int:request_id>/download-certificate', methods=['GET'])
 @jwt_required()
@@ -1380,23 +1394,21 @@ def download_certificate(request_id):
     elif claims['role'] not in ['student', 'faculty', 'hod', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Check if file exists
-    if not od_request.certificate_filename:
+    # Check if file exists in database
+    if not od_request.certificate_file_data:
         return jsonify({'error': 'Certificate not found'}), 404
     
     try:
-        file_path = od_request.certificate_file_path
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found on server'}), 404
-        
+        # Serve file from database
+        from io import BytesIO
         return send_file(
-            file_path,
+            BytesIO(od_request.certificate_file_data),
+            mimetype=od_request.certificate_mime_type,
             as_attachment=True,
-            download_name=od_request.certificate_original_name,
-            mimetype=od_request.certificate_mime_type
+            download_name=od_request.certificate_original_name
         )
     except Exception as e:
-        return jsonify({'error': 'Failed to download file'}), 500
+        return jsonify({'error': f'Failed to download file: {str(e)}'}), 500
 
 @app.route('/api/stats', methods=['GET'])
 @jwt_required()
