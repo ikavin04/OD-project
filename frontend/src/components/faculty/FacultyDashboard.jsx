@@ -66,8 +66,10 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
 
   if (error || !imageSrc) {
     return (
-      <div className={`${className} flex items-center justify-center bg-gray-100`}>
-        <div className="text-sm text-gray-500">Failed to load image</div>
+      <div className={`${className} flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4`}>
+        <FileText className="h-12 w-12 text-gray-400 mb-2" />
+        <div className="text-sm text-gray-600 font-medium">Document not available</div>
+        <div className="text-xs text-gray-500 mt-1">File may have been removed or not uploaded</div>
       </div>
     );
   }
