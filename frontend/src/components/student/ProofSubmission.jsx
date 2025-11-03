@@ -94,8 +94,14 @@ function ProofSubmission() {
         return updated;
       });
       
+      // Clear the file input
+      const fileInput = document.getElementById(`file-${odId}-${proofType}`);
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
       // Refresh data
-      fetchApprovedODRequests();
+      await fetchApprovedODRequests();
     } catch (error) {
       toast.error(error.response?.data?.message || `Failed to submit ${proofType} proof`);
     } finally {
@@ -270,29 +276,19 @@ function ProofSubmission() {
                     </p>
 
                     {odRequest.attendance_proof ? (
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex items-center space-x-2 text-green-600">
-                          <CheckCircle className="h-5 w-5" />
-                          <span className="text-sm font-medium">
-                            Submitted: {odRequest.attendance_proof.filename}
-                          </span>
-                          {odRequest.attendance_proof.uploaded_at && (
-                            <span className="text-xs text-gray-500">
-                              ({format(new Date(odRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy')})
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          disabled
-                          className="btn-secondary text-sm cursor-default"
-                        >
-                          Attendance Proof Submitted
-                        </button>
+                      <div className="flex items-center space-x-2 text-green-600">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="text-sm font-medium">
+                          Submitted: {odRequest.attendance_proof.filename}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({format(new Date(odRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy')})
+                        </span>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         <input
+                          id={`file-${odRequest.id}-attendance`}
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => handleFileSelect(odRequest.id, 'attendance', e.target.files[0])}
@@ -366,6 +362,7 @@ function ProofSubmission() {
                     ) : (
                       <div className="space-y-3">
                         <input
+                          id={`file-${odRequest.id}-certificate`}
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
