@@ -26,6 +26,7 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    let objectUrl = null;
     const loadImage = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -35,9 +36,13 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
             'Authorization': `Bearer ${token}`
           }
         });
-        
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        setImageSrc(url);
+
+        // Ensure the Blob has the correct MIME type so browsers can render it inline
+        const contentType = response.headers['content-type'] || 'application/octet-stream';
+        console.debug('[AuthenticatedImage] Loaded blob', { requestId, fileType, contentType, size: response.data?.size });
+        const blob = new Blob([response.data], { type: contentType });
+        objectUrl = window.URL.createObjectURL(blob);
+        setImageSrc(objectUrl);
         setLoading(false);
       } catch (error) {
         console.error('Failed to load image:', error);
@@ -50,8 +55,8 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
 
     // Cleanup function to revoke the URL
     return () => {
-      if (imageSrc) {
-        window.URL.revokeObjectURL(imageSrc);
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
       }
     };
   }, [requestId, fileType]);
@@ -704,7 +709,7 @@ const FacultyDashboard = () => {
                                   requestId={selectedRequest.id}
                                   fileType="certificate"
                                   alt="Participation Certificate"
-                                  className="max-w-full h-auto max-h-[400px] border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+                                  className="w-full h-[400px] object-contain border-2 border-gray-300 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
                                   onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
                                 />
                               ) : selectedRequest.certificate.mime_type === 'application/pdf' ? (

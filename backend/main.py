@@ -15,6 +15,7 @@ from typing import Optional, List, Dict, Any
 
 # Flask and extensions
 from flask import Flask, request, jsonify, send_file, abort, Response
+import mimetypes
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity, create_refresh_token, get_jwt
 from flask_cors import CORS
@@ -520,12 +521,16 @@ def save_file_to_database(file):
     # Generate secure filename
     filename = secure_filename(file.filename)
     
+    # Prefer browser-provided content type; fall back to guess by file extension
+    guessed_type = mimetypes.guess_type(filename)[0]
+    mime_type = file.content_type or guessed_type or 'application/octet-stream'
+
     return {
         'filename': f"{file_hash}_{filename}",
         'original_name': filename,
         'file_data': file_content,  # Binary data for database
         'file_size': len(file_content),
-        'mime_type': file.content_type or 'application/octet-stream',
+        'mime_type': mime_type,
         'file_hash': file_hash
     }
 
@@ -1088,27 +1093,31 @@ def view_od_application_file(request_id, file_type):
     
     # Serve file from database
     if file_type == 'application' and od_request.application_file_data:
+        # Resolve the most accurate MIME type
+        resolved_mime = od_request.application_mime_type or mimetypes.guess_type(od_request.application_original_name or '')[0] or 'application/octet-stream'
         return Response(
             od_request.application_file_data,
-            mimetype=od_request.application_mime_type or 'application/octet-stream',
+            mimetype=resolved_mime,
             headers={
                 'Content-Disposition': f'inline; filename="{od_request.application_original_name}"',
                 'Content-Length': str(len(od_request.application_file_data))
             }
         )
     elif file_type in ['attendance', 'attendance_proof'] and od_request.attendance_proof_file_data:
+        resolved_mime = od_request.attendance_proof_mime_type or mimetypes.guess_type(od_request.attendance_proof_original_name or '')[0] or 'application/octet-stream'
         return Response(
             od_request.attendance_proof_file_data,
-            mimetype=od_request.attendance_proof_mime_type or 'application/octet-stream',
+            mimetype=resolved_mime,
             headers={
                 'Content-Disposition': f'inline; filename="{od_request.attendance_proof_original_name}"',
                 'Content-Length': str(len(od_request.attendance_proof_file_data))
             }
         )
     elif file_type == 'certificate' and od_request.certificate_file_data:
+        resolved_mime = od_request.certificate_mime_type or mimetypes.guess_type(od_request.certificate_original_name or '')[0] or 'application/octet-stream'
         return Response(
             od_request.certificate_file_data,
-            mimetype=od_request.certificate_mime_type or 'application/octet-stream',
+            mimetype=resolved_mime,
             headers={
                 'Content-Disposition': f'inline; filename="{od_request.certificate_original_name}"',
                 'Content-Length': str(len(od_request.certificate_file_data))
