@@ -1263,14 +1263,21 @@ def submit_certificate(request_id):
     user_id = int(get_jwt_identity())
     claims = get_jwt()
     
-    if claims['role'] != 'student':
-        return jsonify({'error': 'Only students can submit certificate'}), 403
-    
     od_request = ODRequest.query.get_or_404(request_id)
     
-    # Check if this is the student's request
-    if od_request.student_id != user_id:
-        return jsonify({'error': 'Access denied'}), 403
+    role = claims.get('role')
+    try:
+        print(f"[DEBUG] submit_certificate: role={role}, user_id={user_id}, request_id={request_id}")
+    except Exception:
+        pass
+    # Permission rules:
+    # - Students can submit for their own request
+    # - Faculty/HOD/Admin can submit on behalf of the student (e.g., assisted upload)
+    if role == 'student':
+        if od_request.student_id != user_id:
+            return jsonify({'error': 'Access denied: student mismatch'}), 403
+    elif role not in ['faculty', 'hod', 'admin']:
+        return jsonify({'error': f'Access denied: role {role} not permitted'}), 403
     
     # Check if request is approved
     if od_request.status != ODStatus.APPROVED:
@@ -1281,8 +1288,13 @@ def submit_certificate(request_id):
         return jsonify({'error': 'Please submit attendance proof first'}), 400
     
     # Check if certificate is already submitted
-    if od_request.certificate_filename:
-        return jsonify({'error': 'Certificate already submitted'}), 400
+    if od_request.certificate_filename or od_request.certificate_file_data or od_request.certificate_submitted_at:
+        # Return 200 with existing data to mirror attendance proof behavior
+        db.session.refresh(od_request)
+        return jsonify({
+            'message': 'Certificate already submitted',
+            'od_request': od_request.to_dict()
+        }), 200
     
     # Get uploaded file
     file = request.files.get('certificate')
@@ -1307,6 +1319,7 @@ def submit_certificate(request_id):
     
     try:
         db.session.commit()
+        db.session.refresh(od_request)
         
         return jsonify({
             'message': 'Certificate submitted successfully. Your OD process is now complete!',

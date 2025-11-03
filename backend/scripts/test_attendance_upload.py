@@ -61,6 +61,23 @@ def upload_attendance_proof(od_id, token):
         print(r.text)
     r.raise_for_status()
 
+def upload_certificate(od_id, token):
+    png_bytes = base64.b64decode(_PNG_1x1_BASE64)
+    files = {"certificate": ("cert.png", io.BytesIO(png_bytes), "image/png")}
+    headers = {"Authorization": f"Bearer {token}"}
+    r = requests.post(
+        f"{BASE_URL}/od-requests/{od_id}/submit-certificate",
+        files=files,
+        headers=headers,
+        timeout=20,
+    )
+    print("Certificate upload status:", r.status_code)
+    try:
+        print("Certificate response:", r.json())
+    except Exception:
+        print(r.text)
+    # do not raise to allow 200/403 debugging
+
 
 def verify_list(token):
     headers = {"Authorization": f"Bearer {token}"}
@@ -96,3 +113,6 @@ if __name__ == "__main__":
     time.sleep(0.5)
     print("Verifying list response...")
     verify_list(token)
+
+    print("Uploading certificate...")
+    upload_certificate(od_id, token)
