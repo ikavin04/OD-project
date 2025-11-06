@@ -1540,6 +1540,39 @@ def ratelimit_handler(e):
     return jsonify({'error': 'Rate limit exceeded'}), 429
 
 # ============================================================================
+# MONTHLY REPORT ROUTE
+# ============================================================================
+
+@app.route('/api/reports/monthly-od-report', methods=['POST'])
+@jwt_required()
+def trigger_monthly_report():
+    """Manually trigger monthly OD report generation and send to faculty"""
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    
+    # Only faculty/admin can trigger reports
+    if claims['role'] not in ['faculty', 'hod', 'admin']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        from monthly_report import send_monthly_report_to_faculty
+        
+        sent_count, failed_count = send_monthly_report_to_faculty(
+            app, db, Student, ODRequest, Faculty, ProofStatus, mail
+        )
+        
+        return jsonify({
+            'message': 'Monthly report sent successfully',
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'total_recipients': sent_count + failed_count
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error generating monthly report: {str(e)}")
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+
+# ============================================================================
 # MAIN APPLICATION
 # ============================================================================
 

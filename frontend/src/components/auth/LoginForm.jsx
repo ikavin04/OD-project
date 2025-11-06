@@ -120,7 +120,10 @@ const LoginForm = () => {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             OD Management System
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm font-semibold text-blue-600">
+            KGiSL Institute of Technology
+          </p>
+          <p className="mt-1 text-sm text-gray-600">
             Sign in to your account
           </p>
         </div>
