@@ -26,6 +26,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
+# OCR and image processing
+from PIL import Image
+import pytesseract
+import io
+
 # Load environment variables
 load_dotenv()
 
@@ -443,19 +448,19 @@ def send_od_status_email(student_email: str, student_name: str, od_request: ODRe
                     <p style="font-size: 16px; color: #333; line-height: 1.6;">Your On-Duty request has been reviewed and <strong style="color: #dc3545;">rejected</strong>.</p>
                     
                     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
-                        <h4 style="margin: 0 0 15px 0; color: #333;">📋 Request Details:</h4>
+                        <h4 style="margin: 0 0 15px 0; color: #333;">Request Details:</h4>
                         <ul style="margin: 0; padding-left: 20px; color: #555;">
                             <li><strong>Event:</strong> {od_request.event_name}</li>
                             <li><strong>Duration:</strong> {od_request.from_date} to {od_request.to_date}</li>
                             <li><strong>Institution:</strong> {od_request.host_institution or od_request.college_name or 'N/A'}</li>
-                            <li><strong>Status:</strong> <span style="color: #dc3545; font-weight: bold;">❌ REJECTED</span></li>
+                            <li><strong>Status:</strong> <span style="color: #dc3545; font-weight: bold;">REJECTED</span></li>
                         </ul>
                     </div>
                     
-                    {f'<div style="background-color: #f8d7da; padding: 15px; border-radius: 8px; margin: 20px 0;"><h4 style="margin: 0 0 10px 0; color: #721c24;">👩‍🏫 Faculty Comments:</h4><p style="margin: 0; font-style: italic; color: #721c24;">"{comments}"</p></div>' if comments else ''}
+                    {f'<div style="background-color: #f8d7da; padding: 15px; border-radius: 8px; margin: 20px 0;"><h4 style="margin: 0 0 10px 0; color: #721c24;">Faculty Comments:</h4><p style="margin: 0; font-style: italic; color: #721c24;">"{comments}"</p></div>' if comments else ''}
                     
                     <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #b8daff;">
-                        <h4 style="margin: 0 0 10px 0; color: #0c5460;">📝 What to do next:</h4>
+                        <h4 style="margin: 0 0 10px 0; color: #0c5460;">What to do next:</h4>
                         <ul style="margin: 0; padding-left: 20px; color: #0c5460;">
                             <li>Review the feedback provided</li>
                             <li>Modify your request if possible</li>
@@ -482,13 +487,13 @@ def send_od_status_email(student_email: str, student_name: str, od_request: ODRe
         )
         
         mail.send(msg)
-        print(f"✅ Email sent successfully to {student_email}")
+        print(f"Email sent successfully to {student_email}")
         return True
         
     except Exception as e:
-        print(f"❌ Failed to send email to {student_email}: {str(e)}")
+        print(f"Failed to send email to {student_email}: {str(e)}")
         # Log in DEMO MODE
-        print(f"📧 DEMO MODE - Email would be sent:")
+        print(f"DEMO MODE - Email would be sent:")
         print(f"   To: {student_email}")
         print(f"   Subject: {subject}")
         print(f"   Status: {status}")
@@ -538,6 +543,71 @@ def save_file_to_database(file):
 def save_file(file, upload_folder="uploads"):
     """Legacy function - now saves to database instead of file system"""
     return save_file_to_database(file)
+
+def validate_certificate_with_ocr(file_data, mime_type):
+    """
+    Validate certificate using OCR to detect certificate-related keywords
+    Returns: (is_valid: bool, confidence_score: float, extracted_text: str)
+    """
+    try:
+        # Check if file is an image
+        if not mime_type.startswith('image/'):
+            return False, 0.0, "Not an image file"
+        
+        # Load image from binary data
+        image = Image.open(io.BytesIO(file_data))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Check if Tesseract is installed
+        try:
+            # Perform OCR
+            extracted_text = pytesseract.image_to_string(image).lower()
+        except pytesseract.TesseractNotFoundError:
+            print("WARNING: Tesseract OCR not installed. Skipping certificate validation.")
+            print("To enable OCR validation:")
+            print("  Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki")
+            print("  Linux: sudo apt-get install tesseract-ocr")
+            print("  Mac: brew install tesseract")
+            # Allow upload without OCR validation if Tesseract is not installed
+            return True, 0.0, "OCR not available - validation skipped"
+        
+        # Define certificate keywords (case insensitive)
+        certificate_keywords = [
+            'certificate',
+            'certify',
+            'certification',
+            'awarded',
+            'presented',
+            'participation',
+            'achievement',
+            'completion',
+            'recognition',
+            'honor',
+            'excellence',
+            'participant',
+            'successfully completed',
+            'hereby certify',
+            'this is to certify'
+        ]
+        
+        # Count keyword matches
+        matches = sum(1 for keyword in certificate_keywords if keyword in extracted_text)
+        
+        # Calculate confidence score (0-100)
+        confidence_score = min((matches / 3) * 100, 100)  # 3+ keywords = 100% confidence
+        
+        # Require at least 1 certificate keyword
+        is_valid = matches >= 1
+        
+        return is_valid, confidence_score, extracted_text[:500]  # Limit text for logging
+        
+    except Exception as e:
+        print(f"OCR validation error: {str(e)}")
+        # Allow upload on OCR errors (fail open to not block legitimate uploads)
+        return True, 0.0, f"OCR processing failed: {str(e)}"
 
 # ============================================================================
 # AUTHENTICATION ROUTES
@@ -967,7 +1037,7 @@ def approve_od_request(request_id):
         
         # Send email notification
         faculty = Faculty.query.get(user_id)
-        print(f"📧 Sending approval email to {od_request.student.email}")
+        print(f"Sending approval email to {od_request.student.email}")
         email_sent = send_od_status_email(
             student_email=od_request.student.email,
             student_name=od_request.student.name,
@@ -976,7 +1046,7 @@ def approve_od_request(request_id):
             faculty_name=faculty.name,
             comments=od_request.approval_comments
         )
-        print(f"📧 Email sent result: {email_sent}")
+        print(f"Email sent result: {email_sent}")
         
         return jsonify({
             'message': 'OD request approved successfully. Student must submit attendance proof within 3 days.',
@@ -1010,7 +1080,7 @@ def reject_od_request(request_id):
         
         # Send email notification
         faculty = Faculty.query.get(user_id)
-        print(f"📧 Sending rejection email to {od_request.student.email}")
+        print(f"Sending rejection email to {od_request.student.email}")
         email_sent = send_od_status_email(
             student_email=od_request.student.email,
             student_name=od_request.student.name,
@@ -1019,7 +1089,7 @@ def reject_od_request(request_id):
             faculty_name=faculty.name,
             comments=od_request.approval_comments
         )
-        print(f"📧 Email sent result: {email_sent}")
+        print(f"Email sent result: {email_sent}")
         
         return jsonify({
             'message': 'OD request rejected successfully',
@@ -1307,6 +1377,23 @@ def submit_certificate(request_id):
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
+    # Perform OCR validation on certificate
+    is_valid, confidence_score, extracted_text = validate_certificate_with_ocr(
+        file_info['file_data'], 
+        file_info['mime_type']
+    )
+    
+    if not is_valid:
+        print(f"Certificate validation failed for request {request_id}")
+        print(f"Confidence: {confidence_score}%, Text preview: {extracted_text[:200]}")
+        return jsonify({
+            'error': 'Invalid certificate detected',
+            'message': 'The uploaded file does not appear to be a valid certificate. Please upload a clear image of your participation certificate.',
+            'confidence_score': round(confidence_score, 2)
+        }), 400
+    
+    print(f"Certificate validated successfully - Confidence: {confidence_score}%")
+    
     # Update OD request with certificate
     od_request.certificate_filename = file_info['filename']
     od_request.certificate_original_name = file_info['original_name']
@@ -1569,7 +1656,7 @@ def trigger_monthly_report():
         }), 200
         
     except Exception as e:
-        print(f"❌ Error generating monthly report: {str(e)}")
+        print(f"Error generating monthly report: {str(e)}")
         return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
 
 # ============================================================================
