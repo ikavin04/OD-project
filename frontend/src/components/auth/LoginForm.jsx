@@ -80,7 +80,7 @@ const LoginForm = () => {
       // Call login function
       const result = await login(loginData);
       
-      console.log('✅ Login function returned:', result);
+      console.log('[OK] Login function returned:', result);
       
       if (result.success && result.user) {
         toast.success('Login successful!');
@@ -103,7 +103,7 @@ const LoginForm = () => {
       }
       
     } catch (error) {
-      console.error('❌ Login failed:', error);
+      console.error('[ERROR] Login failed:', error);
       toast.error(error.message || 'Login failed');
     } finally {
       setIsLoading(false);

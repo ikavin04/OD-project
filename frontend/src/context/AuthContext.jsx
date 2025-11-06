@@ -30,9 +30,9 @@ export const AuthProvider = ({ children }) => {
           try {
             const parsedUser = JSON.parse(savedUser);
             setUser(parsedUser);
-            console.log('✅ User loaded from localStorage:', parsedUser);
+            console.log('[OK] User loaded from localStorage:', parsedUser);
           } catch (error) {
-            console.log('❌ Failed to parse saved user data');
+            console.log('[ERROR] Failed to parse saved user data');
           }
         }
         
@@ -46,10 +46,10 @@ export const AuthProvider = ({ children }) => {
             setUser(response.data.user);
             // Update localStorage with fresh user data
             localStorage.setItem('user', JSON.stringify(response.data.user));
-            console.log('✅ Token verified, user updated:', response.data.user);
+            console.log('[OK] Token verified, user updated:', response.data.user);
           }
         } catch (error) {
-          console.log('❌ Token verification failed, removing token:', error.response?.data || error.message);
+          console.log('[ERROR] Token verification failed, removing token:', error.response?.data || error.message);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           delete api.defaults.headers.common['Authorization'];
@@ -66,10 +66,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log('🚀 Starting login process with:', credentials);
+      console.log('[INFO] Starting login process with:', credentials);
       
       const response = await api.post('/auth/login', credentials);
-      console.log('✅ Login API response:', response.data);
+      console.log('[OK] Login API response:', response.data);
       
       const { access_token, user: userData } = response.data;
 
@@ -85,12 +85,12 @@ export const AuthProvider = ({ children }) => {
       // Set user state
       setUser(userData);
       
-      console.log('✅ Login successful, user set and saved:', userData);
+      console.log('[OK] Login successful, user set and saved:', userData);
       return { success: true, user: userData };
       
     } catch (error) {
-      console.error('❌ Login error:', error);
-      console.error('❌ Error response:', error.response?.data);
+      console.error('[ERROR] Login error:', error);
+      console.error('[ERROR] Error response:', error.response?.data);
       
       const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
       throw new Error(message);

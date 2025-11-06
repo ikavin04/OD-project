@@ -96,7 +96,7 @@ cors = CORS(app,
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    expose_headers=["Content-Type", "Authorization"]
+    expose_headers=["Content-Type", "Content-Disposition", "Authorization"]
 )
 limiter = Limiter(key_func=get_remote_address)
 limiter.init_app(app)
@@ -1129,43 +1129,35 @@ def view_od_application_file(request_id, file_type):
 @app.route('/api/od/download/<int:request_id>/<string:file_type>')
 @jwt_required()
 def download_od_application_file(request_id, file_type):
-    """Download OD application file (for frontend compatibility)"""
+    """Download OD files from database"""
     od_request = ODRequest.query.get_or_404(request_id)
     
-    # Check if file exists - try multiple paths
-    file_path = None
-    if od_request.application_file_path:
-        # Try the stored path first
-        if os.path.exists(od_request.application_file_path):
-            file_path = od_request.application_file_path
-        else:
-            # Try absolute path
-            abs_path = os.path.abspath(od_request.application_file_path)
-            if os.path.exists(abs_path):
-                file_path = abs_path
-            # Try with od-applications subfolder
-            elif os.path.exists(os.path.join('uploads', 'od-applications', od_request.application_filename)):
-                file_path = os.path.join('uploads', 'od-applications', od_request.application_filename)
-            # Try uploads root with just filename
-            elif os.path.exists(os.path.join('uploads', od_request.application_filename)):
-                file_path = os.path.join('uploads', od_request.application_filename)
+    # Serve file from database based on file type
+    from io import BytesIO
     
-    if not file_path:
-        print(f"File not found for OD request {request_id}")
-        print(f"  Stored path: {od_request.application_file_path}")
-        print(f"  Filename: {od_request.application_filename}")
-        return jsonify({'error': 'File not found'}), 404
-    
-    try:
+    if file_type == 'application' and od_request.application_file_data:
         return send_file(
-            file_path,
+            BytesIO(od_request.application_file_data),
+            mimetype=od_request.application_mime_type or 'application/octet-stream',
             as_attachment=True,
-            download_name=od_request.application_original_name,
-            mimetype=od_request.application_mime_type or 'application/octet-stream'
+            download_name=od_request.application_original_name
         )
-    except Exception as e:
-        print(f"Error serving file: {str(e)}")
-        return jsonify({'error': 'Failed to serve file'}), 500
+    elif file_type in ['attendance', 'attendance_proof'] and od_request.attendance_proof_file_data:
+        return send_file(
+            BytesIO(od_request.attendance_proof_file_data),
+            mimetype=od_request.attendance_proof_mime_type or 'application/octet-stream',
+            as_attachment=True,
+            download_name=od_request.attendance_proof_original_name
+        )
+    elif file_type == 'certificate' and od_request.certificate_file_data:
+        return send_file(
+            BytesIO(od_request.certificate_file_data),
+            mimetype=od_request.certificate_mime_type or 'application/octet-stream',
+            as_attachment=True,
+            download_name=od_request.certificate_original_name
+        )
+    
+    return jsonify({'error': 'File not found in database'}), 404
 
 # ============================================================================
 # UTILITY ROUTES
@@ -1517,6 +1509,18 @@ def handle_preflight():
         response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
         response.headers.add('Access-Control-Allow-Credentials', "true")
         return response
+
+@app.after_request
+def after_request(response):
+    """Add CORS headers to all responses including file downloads"""
+    origin = request.headers.get('Origin')
+    if origin in ["http://localhost:3003", "http://localhost:3002", "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3003", "http://127.0.0.1:3002", "http://127.0.0.1:3001", "http://127.0.0.1:3000"]:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Content-Disposition, Authorization'
+    return response
 
 # ============================================================================
 # ERROR HANDLERS

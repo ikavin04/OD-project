@@ -4,11 +4,15 @@ File upload utilities for the OD Management System
 import os
 import hashlib
 import uuid
+import io
 from datetime import datetime
 from flask import current_app
 from werkzeug.utils import secure_filename
+from PIL import Image
 
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx'}
+MIN_IMAGE_DIMENSION = 50  # Minimum width/height in pixels
+MAX_IMAGE_DIMENSION = 4096  # Maximum width/height in pixels
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 
 class FileUploadService:
@@ -45,17 +49,23 @@ class FileUploadService:
             allowed_extensions: Set of allowed extensions (optional)
         
         Returns:
-            dict: File information or None if error
+            tuple: (dict, str) - (File information or None, error message if any)
         """
         if not file or file.filename == '':
-            return None
+            return None, "No file provided"
         
-        # Check file extension
-        if allowed_extensions:
-            if not FileUploadService.allowed_file_custom(file.filename, allowed_extensions):
-                return None
-        elif not FileUploadService.allowed_file(file.filename):
-            return None
+        # Special handling for image files
+        if folder_name in ['certificates', 'proofs']:
+            is_valid, error_msg = FileUploadService.validate_image_file(file)
+            if not is_valid:
+                return None, error_msg
+        else:
+            # Check file extension for non-image files
+            if allowed_extensions:
+                if not FileUploadService.allowed_file_custom(file.filename, allowed_extensions):
+                    return None, "Invalid file type"
+            elif not FileUploadService.allowed_file(file.filename):
+                return None, "Invalid file type"
         
         # Check file size
         file.seek(0, os.SEEK_END)
@@ -63,8 +73,16 @@ class FileUploadService:
         file.seek(0)
         
         if file_size > MAX_FILE_SIZE:
-            return None
+            return None, f"File too large. Maximum size: {MAX_FILE_SIZE/(1024*1024)}MB"
+        elif file_size == 0:
+            return None, "File is empty"
         
+        # Special handling for image uploads
+        if folder_name in ['certificates', 'proofs']:
+            is_valid, error_msg = FileUploadService.validate_image_file(file)
+            if not is_valid:
+                return None, error_msg
+
         # Generate unique filename
         original_filename = file.filename
         unique_filename = FileUploadService.generate_unique_filename(original_filename)
@@ -121,12 +139,39 @@ class FileUploadService:
     
     @staticmethod
     def validate_image_file(file):
-        """Validate that uploaded file is a valid image"""
+        """
+        Validate that uploaded file is a valid image with acceptable dimensions
+        Returns: (bool, str) - (is_valid, error_message)
+        """
         if not file:
-            return False
+            return False, "No file provided"
         
         image_extensions = {'png', 'jpg', 'jpeg', 'gif'}
-        return FileUploadService.allowed_file_custom(file.filename, image_extensions)
+        if not FileUploadService.allowed_file_custom(file.filename, image_extensions):
+            return False, "Invalid image format. Allowed formats: PNG, JPG, JPEG, GIF"
+        
+        try:
+            # Read the image using PIL
+            image_data = file.read()
+            file.seek(0)  # Reset file pointer after reading
+            
+            if len(image_data) == 0:
+                return False, "Empty file"
+                
+            img = Image.open(io.BytesIO(image_data))
+            
+            # Check image dimensions
+            width, height = img.size
+            if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
+                return False, f"Image too small. Minimum dimensions: {MIN_IMAGE_DIMENSION}x{MIN_IMAGE_DIMENSION} pixels"
+                
+            if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+                return False, f"Image too large. Maximum dimensions: {MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION} pixels"
+            
+            return True, None
+            
+        except Exception as e:
+            return False, f"Invalid image file: {str(e)}"
     
     @staticmethod
     def validate_document_file(file):

@@ -1,11 +1,14 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask import Blueprint, request, jsonify, Response, send_file
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models import Student, Faculty, ODRequest, ODStatus, ODType, ProofStatus
 from app.utils.file_upload import FileUploadService
 from datetime import datetime, date
 from app.utils.auth_utils import get_current_user
 import os
+import mimetypes
+from PIL import Image
+import io
 
 od_bp = Blueprint('od', __name__)
 
@@ -219,8 +222,8 @@ def create_od_request():
         file = request.files['application_file']
         file_data, error = FileUploadService.save_file(file, 'permissions')
         
-        if error:
-            return jsonify({'message': error}), 400
+        if not file_data:
+            return jsonify({'message': error or 'Failed to upload file'}), 400
         
         # Check for duplicate file
         existing_file = ODRequest.query.filter_by(
@@ -389,10 +392,50 @@ def download_file(od_id, file_type):
         if user_type == 'student' and od_request.student_id != user.id:
             return jsonify({'message': 'Access denied'}), 403
         
+        # New: Serve directly from database when available
+        import mimetypes
+
+        if file_type == 'application' and getattr(od_request, 'application_file_data', None):
+            data = od_request.application_file_data
+            filename = od_request.application_original_name or od_request.application_filename
+            mimetype = od_request.application_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+        if file_type == 'attendance_proof' and getattr(od_request, 'attendance_proof_file_data', None):
+            data = od_request.attendance_proof_file_data
+            filename = od_request.attendance_proof_original_name or od_request.attendance_proof_filename
+            mimetype = od_request.attendance_proof_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+        if file_type == 'certificate' and getattr(od_request, 'certificate_file_data', None):
+            data = od_request.certificate_file_data
+            filename = od_request.certificate_original_name or od_request.certificate_filename
+            mimetype = od_request.certificate_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+
+        # Legacy fallback: serve from filesystem if database bytes not present
         # Get file path based on type
         file_path = None
         filename = None
-        
         if file_type == 'application':
             file_path = od_request.application_file_path
             filename = od_request.application_original_name
@@ -404,23 +447,10 @@ def download_file(od_id, file_type):
             filename = od_request.certificate_original_name
         else:
             return jsonify({'message': 'Invalid file type'}), 400
-        
-        # Handle both absolute and relative paths
-        if not file_path:
-            return jsonify({'message': 'File path not found'}), 404
-        
-        # If path is not absolute, make it relative to the backend directory
-        if not os.path.isabs(file_path):
-            from flask import current_app
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            file_path = os.path.join(backend_dir, file_path)
-        
-        if not os.path.exists(file_path):
-            return jsonify({'message': f'File not found: {file_path}'}), 404
-        
-        from flask import send_file
-        
-        # Get the mimetype for the file
+
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'message': 'File not found'}), 404
+
         mimetype = None
         if file_type == 'application':
             mimetype = od_request.application_mime_type
@@ -428,13 +458,8 @@ def download_file(od_id, file_type):
             mimetype = od_request.attendance_proof_mime_type
         elif file_type == 'certificate':
             mimetype = od_request.certificate_mime_type
-        
-        return send_file(
-            file_path, 
-            as_attachment=True, 
-            download_name=filename,
-            mimetype=mimetype
-        )
+
+        return send_file(file_path, as_attachment=True, download_name=filename, mimetype=mimetype)
         
     except Exception as e:
         return jsonify({'message': 'Failed to download file', 'error': str(e)}), 500
@@ -455,10 +480,49 @@ def view_file(od_id, file_type):
         if user_type == 'student' and od_request.student_id != user.id:
             return jsonify({'message': 'Access denied'}), 403
         
-        # Get file path based on type
+        # New: serve directly from database when available (inline viewing)
+        # New: serve directly from database when available (inline viewing)
+        import mimetypes
+        if file_type == 'application' and getattr(od_request, 'application_file_data', None):
+            data = od_request.application_file_data
+            filename = od_request.application_original_name or od_request.application_filename
+            mimetype = od_request.application_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'inline; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+        if file_type == 'attendance_proof' and getattr(od_request, 'attendance_proof_file_data', None):
+            data = od_request.attendance_proof_file_data
+            filename = od_request.attendance_proof_original_name or od_request.attendance_proof_filename
+            mimetype = od_request.attendance_proof_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'inline; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+        if file_type == 'certificate' and getattr(od_request, 'certificate_file_data', None):
+            data = od_request.certificate_file_data
+            filename = od_request.certificate_original_name or od_request.certificate_filename
+            mimetype = od_request.certificate_mime_type or (mimetypes.guess_type(filename or '')[0] or 'application/octet-stream')
+            return Response(
+                data,
+                mimetype=mimetype,
+                headers={
+                    'Content-Disposition': f'inline; filename="{filename}"',
+                    'Content-Length': str(len(data))
+                }
+            )
+
+        # Legacy fallback: file system
         file_path = None
         filename = None
-        
         if file_type == 'application':
             file_path = od_request.application_file_path
             filename = od_request.application_original_name
@@ -470,23 +534,10 @@ def view_file(od_id, file_type):
             filename = od_request.certificate_original_name
         else:
             return jsonify({'message': 'Invalid file type'}), 400
-        
-        # Handle both absolute and relative paths
-        if not file_path:
-            return jsonify({'message': 'File path not found'}), 404
-        
-        # If path is not absolute, make it relative to the backend directory
-        if not os.path.isabs(file_path):
-            from flask import current_app
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            file_path = os.path.join(backend_dir, file_path)
-        
-        if not os.path.exists(file_path):
-            return jsonify({'message': f'File not found: {file_path}'}), 404
-        
-        from flask import send_file
-        
-        # Get the mimetype for the file
+
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'message': 'File not found'}), 404
+
         mimetype = None
         if file_type == 'application':
             mimetype = od_request.application_mime_type
@@ -494,13 +545,8 @@ def view_file(od_id, file_type):
             mimetype = od_request.attendance_proof_mime_type
         elif file_type == 'certificate':
             mimetype = od_request.certificate_mime_type
-        
-        # Send file for viewing (not as attachment)
-        return send_file(
-            file_path, 
-            as_attachment=False,  # This is the key difference!
-            mimetype=mimetype
-        )
+
+        return send_file(file_path, as_attachment=False, mimetype=mimetype)
         
     except Exception as e:
         return jsonify({'message': 'Failed to view file', 'error': str(e)}), 500

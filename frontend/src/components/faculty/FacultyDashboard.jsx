@@ -173,40 +173,40 @@ const FacultyDashboard = () => {
 
   const fetchODRequests = async () => {
     try {
-      console.log('🚀 Fetching OD requests for faculty...');
-      console.log('🔑 Current auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      console.log('[INFO] Fetching OD requests for faculty...');
+      console.log('[AUTH] Current auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
       const response = await api.get('/faculty/od-requests');
-      console.log('✅ Faculty OD requests response status:', response.status);
-      console.log('📝 Faculty OD requests response data:', response.data);
-      console.log('📊 Number of requests received:', response.data.od_requests?.length || 0);
+      console.log('[OK] Faculty OD requests response status:', response.status);
+      console.log('[DATA] Faculty OD requests response data:', response.data);
+      console.log('[STATS] Number of requests received:', response.data.od_requests?.length || 0);
       
       setOdRequests(response.data.od_requests || []);
       
       if (response.data.od_requests?.length > 0) {
-        console.log('🎯 First request details:', response.data.od_requests[0]);
+        console.log('[ACTION] First request details:', response.data.od_requests[0]);
         toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`);
       } else {
-        console.log('📭 No OD requests found');
+        console.log('[INFO] No OD requests found');
         toast.info('No OD requests found for your department');
       }
       
     } catch (error) {
-      console.error('❌ API Error:', error);
-      console.error('❌ Error response status:', error.response?.status);
-      console.error('❌ Error response data:', error.response?.data);
-      console.error('❌ Error message:', error.message);
+      console.error('[ERROR] API Error:', error);
+      console.error('[ERROR] Error response status:', error.response?.status);
+      console.error('[ERROR] Error response data:', error.response?.data);
+      console.error('[ERROR] Error message:', error.message);
       
       if (error.response?.status === 401) {
-        console.log('🔐 Authentication error - user may need to re-login');
+        console.log('[AUTH] Authentication error - user may need to re-login');
         toast.error('Session expired. Please refresh and login again.');
         setOdRequests([]);
       } else if (error.response?.status === 403) {
-        console.log('🚫 Access denied - insufficient permissions');
+        console.log('[ACCESS] Access denied - insufficient permissions');
         toast.error('Access denied. You may not have faculty permissions.');
         setOdRequests([]);
       } else {
-        console.log('💥 Other error occurred');
+        console.log('[ERROR] Other error occurred');
         toast.error(`Failed to fetch OD requests: ${error.response?.data?.message || error.message}`);
         setOdRequests([]);
       }
@@ -218,13 +218,13 @@ const FacultyDashboard = () => {
   const handleApproveReject = async (requestId, action, reason = '') => {
     setActionLoading(requestId);
     try {
-      console.log(`🎯 ${action}ing request ID: ${requestId}`);
+      console.log(`[ACTION] ${action}ing request ID: ${requestId}`);
       
       const endpoint = `/faculty/od-requests/${requestId}/${action}`;
       const payload = action === 'reject' ? { comments: reason } : {};
       
-      console.log('📤 Sending to endpoint:', endpoint);
-      console.log('📤 Payload:', payload);
+      console.log('[REQUEST] Sending to endpoint:', endpoint);
+      console.log('[REQUEST] Payload:', payload);
       
       await api.post(endpoint, payload);
       toast.success(`Request ${action}d successfully!`);
@@ -232,7 +232,7 @@ const FacultyDashboard = () => {
       setShowModal(false);
       setSelectedRequest(null);
     } catch (error) {
-      console.error(`❌ Failed to ${action} request:`, error);
+      console.error(`[ERROR] Failed to ${action} request:`, error);
       if (error.response?.status === 401) {
         toast.error('Session expired. Please refresh the page and try again.');
       } else {
@@ -356,8 +356,8 @@ const FacultyDashboard = () => {
   };
 
   const filteredRequests = odRequests.filter(request => {
-    const matchesSearch = request.student_info?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.student_info?.roll_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = request.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         request.student?.roll_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.event_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
@@ -417,19 +417,19 @@ const FacultyDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Name</label>
-                    <p className="text-gray-900">{selectedRequest.student_info?.name}</p>
+                    <p className="text-gray-900">{selectedRequest.student?.name}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Roll Number</label>
-                    <p className="text-gray-900">{selectedRequest.student_info?.roll_number}</p>
+                    <p className="text-gray-900">{selectedRequest.student?.roll_number}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Email</label>
-                    <p className="text-gray-900">{selectedRequest.student_info?.email}</p>
+                    <p className="text-gray-900">{selectedRequest.student?.email}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Department</label>
-                    <p className="text-gray-900">{selectedRequest.student_info?.department}</p>
+                    <p className="text-gray-900">{selectedRequest.student?.department}</p>
                   </div>
                 </div>
               </div>
@@ -498,7 +498,7 @@ const FacultyDashboard = () => {
               <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-4 mb-6">
                 <div className="flex items-center mb-3">
                   <FileText className="h-6 w-6 text-blue-600 mr-2" />
-                  <h3 className="text-xl font-bold text-blue-900">📋 Student Permission Document</h3>
+                  <h3 className="text-xl font-bold text-blue-900">Student Permission Document</h3>
                   <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">REQUIRED FOR APPROVAL</span>
                 </div>
                 
@@ -507,7 +507,7 @@ const FacultyDashboard = () => {
                     {/* File Information */}
                     <div className="bg-white rounded-lg p-3 border border-gray-200">
                       <div className="flex items-center space-x-3">
-                        <label className="text-sm font-semibold text-gray-700">📎 File Name:</label>
+                        <label className="text-sm font-semibold text-gray-700">File Name:</label>
                         <span className="text-sm font-medium text-gray-900">{selectedRequest.application_file.filename}</span>
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                           {(selectedRequest.application_file.size / 1024 / 1024).toFixed(2)} MB
@@ -522,7 +522,7 @@ const FacultyDashboard = () => {
                         className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        💾 Download Original
+                        Download Original
                       </button>
                       <button
                         onClick={() => handleViewFile(selectedRequest.id, 'application')}
@@ -537,7 +537,7 @@ const FacultyDashboard = () => {
                     {selectedRequest.application_file.mime_type?.startsWith('image/') && (
                       <div className="bg-white rounded-lg border-2 border-gray-300 p-4">
                         <div className="text-center mb-3">
-                          <h4 className="text-lg font-semibold text-gray-900">📄 Student's Permission Document Preview</h4>
+                          <h4 className="text-lg font-semibold text-gray-900">Student's Permission Document Preview</h4>
                           <p className="text-sm text-gray-600">Review this document carefully before making approval decision</p>
                         </div>
                         <div className="flex justify-center">
@@ -550,7 +550,7 @@ const FacultyDashboard = () => {
                           />
                         </div>
                         <div className="mt-3 text-center">
-                          <p className="text-xs text-gray-500">👆 Click image to view in full resolution</p>
+                          <p className="text-xs text-gray-500">Click image to view in full resolution</p>
                         </div>
                       </div>
                     )}
@@ -577,7 +577,7 @@ const FacultyDashboard = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <h4 className="text-lg font-semibold text-red-800">⚠️ No Permission Document Found</h4>
+                        <h4 className="text-lg font-semibold text-red-800">No Permission Document Found</h4>
                         <p className="text-sm text-red-700">Student has not uploaded their permission document. This request cannot be approved without it.</p>
                       </div>
                     </div>
@@ -588,13 +588,13 @@ const FacultyDashboard = () => {
               {/* Proof Submissions Section */}
               {selectedRequest.status === 'approved' && (
                 <div className="border-b border-gray-200 pb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">📋 Proof Submissions</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Proof Submissions</h3>
                   <div className="text-sm text-gray-600 mb-4">
                     Status: <span className="font-semibold text-blue-600">
-                      {selectedRequest.proof_submission_status === 'not_submitted' ? 'Not Submitted' :
+                      {selectedRequest.proof_submission_status === 'not_submitted' ? 'Not[Submitted]' :
                        selectedRequest.proof_submission_status === 'attendance_pending' ? 'Awaiting Attendance Proof' :
                        selectedRequest.proof_submission_status === 'certificate_pending' ? 'Awaiting Certificate' :
-                       selectedRequest.proof_submission_status === 'completed' ? 'All Proofs Submitted' :
+                       selectedRequest.proof_submission_status === 'completed' ? 'All Proofs[Submitted]' :
                        selectedRequest.proof_submission_status}
                     </span>
                   </div>
@@ -610,7 +610,7 @@ const FacultyDashboard = () => {
                         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-green-800">✅ Submitted</p>
+                              <p className="text-sm font-medium text-green-800">[Submitted]</p>
                               <p className="text-xs text-green-600">
                                 {selectedRequest.attendance_proof.uploaded_at && 
                                   `Uploaded: ${format(new Date(selectedRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy hh:mm a')}`}
@@ -619,13 +619,22 @@ const FacultyDashboard = () => {
                                 File: {selectedRequest.attendance_proof.filename}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleViewFile(selectedRequest.id, 'attendance_proof')}
-                              className="btn-secondary flex items-center text-sm"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleViewFile(selectedRequest.id, 'attendance_proof')}
+                                className="btn-secondary flex items-center text-sm"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleDownloadFile(selectedRequest.id, 'attendance_proof', selectedRequest.attendance_proof.filename)}
+                                className="btn-primary flex items-center text-sm"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
+                              </button>
+                            </div>
                           </div>
                         </div>
                         
@@ -645,7 +654,7 @@ const FacultyDashboard = () => {
                               />
                             </div>
                             <div className="mt-2 text-center">
-                              <p className="text-xs text-gray-500">👆 Click to view in full size</p>
+                              <p className="text-xs text-gray-500">Click to view in full size</p>
                             </div>
                           </div>
                         )}
@@ -659,7 +668,7 @@ const FacultyDashboard = () => {
                             <p className="text-xs text-yellow-700">
                               {selectedRequest.deadlines?.attendance_proof_deadline
                                 ? `Deadline: ${format(new Date(selectedRequest.deadlines.attendance_proof_deadline), 'MMM dd, yyyy')}`
-                                : 'Student has not submitted attendance proof yet'}
+                                : 'Student has not[Submitted] attendance proof yet'}
                             </p>
                           </div>
                         </div>
@@ -678,7 +687,7 @@ const FacultyDashboard = () => {
                         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-medium text-green-800">✅ Submitted</p>
+                              <p className="text-sm font-medium text-green-800">[Submitted]</p>
                               <p className="text-xs text-green-600">
                                 {selectedRequest.certificate.uploaded_at && 
                                   `Uploaded: ${format(new Date(selectedRequest.certificate.uploaded_at), 'MMM dd, yyyy hh:mm a')}`}
@@ -687,13 +696,22 @@ const FacultyDashboard = () => {
                                 File: {selectedRequest.certificate.filename}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
-                              className="btn-secondary flex items-center text-sm"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleViewFile(selectedRequest.id, 'certificate')}
+                                className="btn-secondary flex items-center text-sm"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleDownloadFile(selectedRequest.id, 'certificate', selectedRequest.certificate.filename)}
+                                className="btn-primary flex items-center text-sm"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Download
+                              </button>
+                            </div>
                           </div>
                         </div>
                         
@@ -723,7 +741,7 @@ const FacultyDashboard = () => {
                               )}
                             </div>
                             <div className="mt-2 text-center">
-                              <p className="text-xs text-gray-500">👆 Click to view in full size</p>
+                              <p className="text-xs text-gray-500">Click to view in full size</p>
                             </div>
                           </div>
                         )}
@@ -733,13 +751,13 @@ const FacultyDashboard = () => {
                         <div className="flex items-center">
                           <Clock className="h-5 w-5 text-gray-500 mr-2" />
                           <div>
-                            <p className="text-sm font-medium text-gray-700">Not Yet Submitted</p>
+                            <p className="text-sm font-medium text-gray-700">Not Yet[Submitted]</p>
                             <p className="text-xs text-gray-600">
                               {selectedRequest.attendance_proof 
                                 ? selectedRequest.deadlines?.certificate_deadline
                                   ? `Deadline: ${format(new Date(selectedRequest.deadlines.certificate_deadline), 'MMM dd, yyyy')}`
                                   : 'Awaiting certificate submission'
-                                : 'Certificate can be submitted after attendance proof'}
+                                : 'Certificate can be[Submitted] after attendance proof'}
                             </p>
                           </div>
                         </div>
@@ -816,63 +834,6 @@ const FacultyDashboard = () => {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FileText className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-900">{odRequests.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {odRequests.filter(req => req.status === 'pending').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {odRequests.filter(req => req.status === 'approved').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <XCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {odRequests.filter(req => req.status === 'rejected').length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="card mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
@@ -927,7 +888,7 @@ const FacultyDashboard = () => {
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">{request.event_name}</h3>
                       <p className="text-sm text-gray-600">
-                        {request.student_info?.name} ({request.student_info?.roll_number})
+                        {request.student?.name} ({request.student?.roll_number})
                       </p>
                     </div>
                   </div>
@@ -959,7 +920,7 @@ const FacultyDashboard = () => {
                     <span className="text-sm">{request.host_institution || request.venue || 'N/A'}</span>
                   </div>
                   <div className="text-sm text-gray-600">
-                    Submitted: {format(new Date(request.created_at), 'MMM dd, yyyy')}
+                   [Submitted]: {format(new Date(request.created_at), 'MMM dd, yyyy')}
                   </div>
                 </div>
 

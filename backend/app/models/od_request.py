@@ -91,6 +91,10 @@ class ODRequest(db.Model):
     
     def to_dict(self, include_sensitive=False):
         """Convert to dictionary, optionally including sensitive data"""
+        # Get student information
+        from .user import Student
+        student = Student.query.get(self.student_id) if self.student_id else None
+        
         data = {
             'id': self.id,
             'student_id': self.student_id,
@@ -111,6 +115,20 @@ class ODRequest(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+        
+        # Add student information
+        if student:
+            data['student'] = {
+                'id': student.id,
+                'name': student.name,
+                'roll_number': student.roll_number,
+                'email': student.email,
+                'department': student.department,
+                'year': student.year,
+                'semester': student.semester
+            }
+        else:
+            data['student'] = None
         
         # Include file information
         data['application_file'] = {
