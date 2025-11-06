@@ -1358,6 +1358,16 @@ def submit_certificate(request_id):
     if not od_request.attendance_proof_filename:
         return jsonify({'error': 'Please submit attendance proof first'}), 400
     
+    # Check certificate submission deadline (1 month from attendance proof submission)
+    if od_request.certificate_submission_deadline:
+        deadline = od_request.certificate_submission_deadline
+        if datetime.now(timezone.utc) > deadline:
+            return jsonify({
+                'error': 'Certificate submission deadline has passed',
+                'message': f'The deadline for certificate submission was {deadline.strftime("%d-%m-%Y %H:%M")}. You had 1 month from attendance proof submission. Please contact your faculty for further assistance.',
+                'deadline': deadline.isoformat()
+            }), 400
+    
     # Check if certificate is already submitted
     if od_request.certificate_filename or od_request.certificate_file_data or od_request.certificate_submitted_at:
         # Return 200 with existing data to mirror attendance proof behavior
@@ -1388,8 +1398,9 @@ def submit_certificate(request_id):
         print(f"Confidence: {confidence_score}%, Text preview: {extracted_text[:200]}")
         return jsonify({
             'error': 'Invalid certificate detected',
-            'message': 'The uploaded file does not appear to be a valid certificate. Please upload a clear image of your participation certificate.',
-            'confidence_score': round(confidence_score, 2)
+            'message': 'The uploaded file does not appear to be a valid participation certificate. Please ensure you upload a clear image of your certificate with visible text. The certificate must contain words like "Certificate", "Participation", "Awarded", or similar certification terms.',
+            'confidence_score': round(confidence_score, 2),
+            'deadline_info': f'You have until {od_request.certificate_submission_deadline.strftime("%d-%m-%Y")} (1 month from attendance proof submission) to upload a valid certificate.'
         }), 400
     
     print(f"Certificate validated successfully - Confidence: {confidence_score}%")
@@ -1410,7 +1421,8 @@ def submit_certificate(request_id):
         db.session.refresh(od_request)
         
         return jsonify({
-            'message': 'Certificate submitted successfully. Your OD process is now complete!',
+            'message': 'Certificate submitted successfully and validated! Your OD process is now complete.',
+            'validation_info': f'Certificate validated with {round(confidence_score, 1)}% confidence',
             'od_request': od_request.to_dict()
         }), 200
         
