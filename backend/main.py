@@ -160,6 +160,7 @@ class Student(db.Model):
     department = db.Column(db.String(100), nullable=False)
     year = db.Column(db.Integer, nullable=False)
     semester = db.Column(db.Integer, nullable=False)
+    section = db.Column(db.String(10))  # A, B, etc.
     phone_number = db.Column(db.String(15))
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime(timezone=True))
@@ -184,6 +185,7 @@ class Student(db.Model):
             'department': self.department,
             'year': self.year,
             'semester': self.semester,
+            'section': self.section,
             'phone_number': self.phone_number,
             'role': 'student',
             'is_active': self.is_active,
@@ -201,6 +203,12 @@ class Faculty(db.Model):
     department = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(15))
     role = db.Column(db.Enum(UserRole), default=UserRole.FACULTY, nullable=False)
+    
+    # Faculty Type and Class Assignment
+    faculty_type = db.Column(db.String(50))  # 'Advisor', 'Mentor', 'Class Handling'
+    assigned_year = db.Column(db.Integer)  # 2, 3, 4 for year assignment
+    assigned_section = db.Column(db.String(10))  # 'A', 'B', etc.
+    
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
@@ -224,6 +232,9 @@ class Faculty(db.Model):
             'department': self.department,
             'phone_number': self.phone_number,
             'role': self.role.value,
+            'faculty_type': self.faculty_type,
+            'assigned_year': self.assigned_year,
+            'assigned_section': self.assigned_section,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
@@ -927,11 +938,33 @@ def get_faculty_od_requests():
     if claims['role'] not in ['faculty', 'hod', 'admin']:
         return jsonify({'error': 'Access denied'}), 403
     
-    # Faculty see all requests
-    od_requests = ODRequest.query.all()
+    # Get filter parameters from query string
+    year_filter = request.args.get('year', type=int)
+    section_filter = request.args.get('section', type=str)
+    status_filter = request.args.get('status', type=str)
+    
+    # Build query - Faculty see all requests
+    query = ODRequest.query.join(Student)
+    
+    # Apply filters
+    if year_filter:
+        query = query.filter(Student.year == year_filter)
+    
+    if section_filter:
+        query = query.filter(Student.section == section_filter)
+    
+    if status_filter:
+        query = query.filter(ODRequest.status == ODStatus[status_filter.upper()])
+    
+    od_requests = query.order_by(ODRequest.created_at.desc()).all()
     
     return jsonify({
-        'od_requests': [od.to_dict() for od in od_requests]
+        'od_requests': [od.to_dict() for od in od_requests],
+        'filters': {
+            'year': year_filter,
+            'section': section_filter,
+            'status': status_filter
+        }
     }), 200
 
 # Student-specific endpoint (alias for the same functionality)
@@ -994,6 +1027,53 @@ def get_faculty_profile():
         return jsonify({'error': 'Faculty not found'}), 404
     
     return jsonify({'faculty': faculty.to_dict()}), 200
+
+@app.route('/api/faculty/profile', methods=['PUT'])
+@jwt_required()
+def update_faculty_profile():
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    
+    if claims['role'] not in ['faculty', 'hod', 'admin']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    faculty = Faculty.query.get(user_id)
+    if not faculty:
+        return jsonify({'error': 'Faculty not found'}), 404
+    
+    data = request.get_json()
+    
+    # Update allowed fields
+    if 'faculty_type' in data:
+        # Validate faculty type
+        if data['faculty_type'] not in ['Advisor', 'Mentor', 'Class Handling', None, '']:
+            return jsonify({'error': 'Invalid faculty type. Must be Advisor, Mentor, or Class Handling'}), 400
+        faculty.faculty_type = data['faculty_type'] if data['faculty_type'] else None
+    
+    if 'assigned_year' in data:
+        # Validate year (2, 3, 4)
+        if data['assigned_year'] not in [2, 3, 4, None, '']:
+            return jsonify({'error': 'Invalid year. Must be 2, 3, or 4'}), 400
+        faculty.assigned_year = data['assigned_year'] if data['assigned_year'] else None
+    
+    if 'assigned_section' in data:
+        # Validate section (A, B)
+        if data['assigned_section'] and data['assigned_section'] not in ['A', 'B']:
+            return jsonify({'error': 'Invalid section. Must be A or B'}), 400
+        faculty.assigned_section = data['assigned_section'] if data['assigned_section'] else None
+    
+    if 'phone_number' in data:
+        faculty.phone_number = data['phone_number']
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'faculty': faculty.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
 
 # Faculty approval endpoint
 @app.route('/api/faculty/od-requests/<int:request_id>/approve', methods=['POST'])

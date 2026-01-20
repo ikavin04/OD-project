@@ -162,6 +162,8 @@ const FacultyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [sectionFilter, setSectionFilter] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
@@ -169,14 +171,25 @@ const FacultyDashboard = () => {
 
   useEffect(() => {
     fetchODRequests();
-  }, []);
+  }, [yearFilter, sectionFilter]);
 
   const fetchODRequests = async () => {
     try {
       console.log('[INFO] Fetching OD requests for faculty...');
       console.log('[AUTH] Current auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       
-      const response = await api.get('/faculty/od-requests');
+      // Build query parameters
+      const params = {};
+      if (yearFilter && yearFilter !== 'all') {
+        params.year = yearFilter;
+      }
+      if (sectionFilter && sectionFilter !== 'all') {
+        params.section = sectionFilter;
+      }
+      
+      console.log('[FILTERS] Applying filters:', params);
+      
+      const response = await api.get('/faculty/od-requests', { params });
       console.log('[OK] Faculty OD requests response status:', response.status);
       console.log('[DATA] Faculty OD requests response data:', response.data);
       console.log('[STATS] Number of requests received:', response.data.od_requests?.length || 0);
@@ -188,7 +201,7 @@ const FacultyDashboard = () => {
         toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`);
       } else {
         console.log('[INFO] No OD requests found');
-        toast.info('No OD requests found for your department');
+        // toast.info is not available in react-hot-toast, using console log instead
       }
       
     } catch (error) {
@@ -836,35 +849,96 @@ const FacultyDashboard = () => {
 
       {/* Filters */}
       <div className="card mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex-1 max-w-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="col-span-1 lg:col-span-2">
             <div className="relative">
               <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search by student name, roll number, or reason..."
+                placeholder="Search by student name, roll number, or event..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="input-field pl-10 w-full"
               />
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input-field pl-10 pr-8"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+          {/* Year Filter */}
+          <div className="relative">
+            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="input-field pl-10 pr-8 w-full"
+            >
+              <option value="all">All Years</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+            </select>
           </div>
+          
+          {/* Section Filter */}
+          <div className="relative">
+            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <select
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              className="input-field pl-10 pr-8 w-full"
+            >
+              <option value="all">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+            </select>
+          </div>
+          
+          {/* Status Filter */}
+          <div className="relative col-span-1 md:col-span-2 lg:col-span-1">
+            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input-field pl-10 pr-8 w-full"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          
+          {/* Active Filters Display */}
+          {(yearFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all') && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-4 flex items-center gap-2 text-sm">
+              <span className="text-gray-600">Active filters:</span>
+              {yearFilter !== 'all' && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  Year: {yearFilter}
+                </span>
+              )}
+              {sectionFilter !== 'all' && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
+                  Section: {sectionFilter}
+                </span>
+              )}
+              {statusFilter !== 'all' && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
+                  Status: {statusFilter}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setYearFilter('all');
+                  setSectionFilter('all');
+                  setStatusFilter('all');
+                }}
+                className="text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -888,7 +962,7 @@ const FacultyDashboard = () => {
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">{request.event_name}</h3>
                       <p className="text-sm text-gray-600">
-                        {request.student?.name} ({request.student?.roll_number})
+                        {request.student?.name} ({request.student?.roll_number}) - Year {request.student?.year}, Section {request.student?.section || 'N/A'}
                       </p>
                     </div>
                   </div>

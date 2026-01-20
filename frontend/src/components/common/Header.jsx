@@ -63,6 +63,34 @@ const Header = () => {
                 </Link>
               </nav>
             )}
+
+            {/* Navigation for Faculty */}
+            {user?.role && ['faculty', 'hod', 'admin'].includes(user.role) && (
+              <nav className="ml-8 flex space-x-8">
+                <Link
+                  to="/faculty"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/faculty')
+                      ? 'text-blue-700 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Home className="h-4 w-4" />
+                  <span>OD Requests</span>
+                </Link>
+                <Link
+                  to="/faculty/profile"
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/faculty/profile')
+                      ? 'text-blue-700 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </nav>
+            )}
           </div>
 
           {/* User Info & Logout */}
