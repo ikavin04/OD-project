@@ -838,136 +838,136 @@ const FacultyDashboard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Faculty Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Welcome back, {user?.name || user?.email}! Review and manage OD requests.
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="card mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="col-span-1 lg:col-span-2">
-            <div className="relative">
-              <Search className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by student name, roll number, or event..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10 w-full"
-              />
-            </div>
-          </div>
-          
-          {/* Year Filter */}
-          <div className="relative">
-            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="input-field pl-10 pr-8 w-full"
-            >
-              <option value="all">All Years</option>
-              <option value="2">2nd Year</option>
-              <option value="3">3rd Year</option>
-              <option value="4">4th Year</option>
-            </select>
-          </div>
-          
-          {/* Section Filter */}
-          <div className="relative">
-            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <select
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-              className="input-field pl-10 pr-8 w-full"
-            >
-              <option value="all">All Sections</option>
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-            </select>
-          </div>
-          
-          {/* Status Filter */}
-          <div className="relative col-span-1 md:col-span-2 lg:col-span-1">
-            <Filter className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field pl-10 pr-8 w-full"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          
-          {/* Active Filters Display */}
-          {(yearFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all') && (
-            <div className="col-span-1 md:col-span-2 lg:col-span-4 flex items-center gap-2 text-sm">
-              <span className="text-gray-600">Active filters:</span>
-              {yearFilter !== 'all' && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
-                  Year: {yearFilter}
-                </span>
-              )}
-              {sectionFilter !== 'all' && (
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">
-                  Section: {sectionFilter}
-                </span>
-              )}
-              {statusFilter !== 'all' && (
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                  Status: {statusFilter}
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setYearFilter('all');
-                  setSectionFilter('all');
-                  setStatusFilter('all');
-                }}
-                className="text-gray-500 hover:text-gray-700 underline"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Header */}
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Faculty Dashboard</h1>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base text-gray-600">
+            Welcome back, {user?.name || user?.email}! Review and manage OD requests.
+          </p>
         </div>
-      </div>
 
-      {/* OD Requests List */}
-      <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">OD Requests</h2>
-        
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search */}
+            <div className="col-span-1 sm:col-span-2">
+              <div className="relative">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by student name, roll number, or event..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field pl-9 pr-3 w-full text-sm"
+                />
+              </div>
+            </div>
+            
+            {/* Year Filter */}
+            <div className="relative">
+              <Filter className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              <select
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                className="input-field pl-9 pr-8 w-full text-sm appearance-none"
+              >
+                <option value="all">All Years</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
+            </div>
+            
+            {/* Section Filter */}
+            <div className="relative">
+              <Filter className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              <select
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+                className="input-field pl-9 pr-8 w-full text-sm appearance-none"
+              >
+                <option value="all">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+              </select>
+            </div>
+            
+            {/* Status Filter */}
+            <div className="relative col-span-1 sm:col-span-2 lg:col-span-1">
+              <Filter className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              <select
+                value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+                className="input-field pl-9 pr-8 w-full text-sm appearance-none"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            {/* Active Filters Display */}
+            {(yearFilter !== 'all' || sectionFilter !== 'all' || statusFilter !== 'all') && (
+              <div className="col-span-1 sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+                <span className="text-gray-600 text-xs font-medium">Active filters:</span>
+                {yearFilter !== 'all' && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    Year: {yearFilter}
+                  </span>
+                )}
+                {sectionFilter !== 'all' && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    Section: {sectionFilter}
+                  </span>
+                )}
+                {statusFilter !== 'all' && (
+                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    Status: {statusFilter}
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setYearFilter('all');
+                    setSectionFilter('all');
+                    setStatusFilter('all');
+                  }}
+                  className="text-gray-500 hover:text-gray-700 underline text-xs font-medium ml-1"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* OD Requests List */}
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">OD Requests</h2>
         {filteredRequests.length === 0 ? (
-          <div className="text-center py-8">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No OD requests found</p>
-            <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filter criteria</p>
+          <div className="text-center py-8 sm:py-10">
+            <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 text-sm sm:text-base">No OD requests found</p>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">Try adjusting your search or filter criteria</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredRequests.map((request) => (
-              <div key={request.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
+              <div key={request.id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3 mb-3">
+                  <div className="flex items-start gap-2">
                     {getStatusIcon(request.status)}
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{request.event_name}</h3>
-                      <p className="text-sm text-gray-600">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-medium text-gray-900 break-words leading-snug">{request.event_name}</h3>
+                      <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                         {request.student?.name} ({request.student?.roll_number}) - Year {request.student?.year}, Section {request.student?.section || 'N/A'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={getStatusBadgeClass(request.status)}>
+                  <div className="flex items-center gap-2 self-end sm:self-start flex-shrink-0">
+                    <span className={`${getStatusBadgeClass(request.status)} text-xs`}>
                       {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                     </span>
                     <button
@@ -975,48 +975,48 @@ const FacultyDashboard = () => {
                         setSelectedRequest(request);
                         setShowModal(true);
                       }}
-                      className="p-2 text-gray-400 hover:text-gray-600"
+                      className="p-1.5 text-gray-400 hover:text-gray-600"
                     >
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-xs">
                   <div className="flex items-center text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span className="text-sm">
+                    <Calendar className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                    <span className="truncate">
                       {format(new Date(request.from_date), 'MMM dd')} - {format(new Date(request.to_date), 'MMM dd, yyyy')}
                     </span>
                   </div>
                   <div className="flex items-center text-gray-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span className="text-sm">{request.host_institution || request.venue || 'N/A'}</span>
+                    <MapPin className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                    <span className="truncate">{request.host_institution || request.venue || 'N/A'}</span>
                   </div>
-                  <div className="text-sm text-gray-600">
-                   [Submitted]: {format(new Date(request.created_at), 'MMM dd, yyyy')}
+                  <div className="text-gray-600 truncate col-span-1 sm:col-span-2">
+                   Submitted: {format(new Date(request.created_at), 'MMM dd, yyyy')}
                   </div>
                 </div>
 
                 {request.status === 'pending' && (
-                  <div className="flex space-x-3 mt-4">
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3 pt-3 border-t border-gray-100">
                     <button
                       onClick={() => handleApproveReject(request.id, 'approve')}
                       disabled={actionLoading === request.id}
-                      className="btn-primary text-sm flex items-center"
+                      className="btn-primary text-xs sm:text-sm py-2 flex items-center justify-center w-full sm:flex-1"
                     >
-                      <Check className="h-4 w-4 mr-1" />
-                      Approve
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span>Approve</span>
                     </button>
                     <button
                       onClick={() => {
                         setSelectedRequest(request);
                         setShowModal(true);
                       }}
-                      className="btn-danger text-sm flex items-center"
+                      className="btn-danger text-xs sm:text-sm py-2 flex items-center justify-center w-full sm:flex-1"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Reject
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span>Reject</span>
                     </button>
                   </div>
                 )}
@@ -1027,6 +1027,7 @@ const FacultyDashboard = () => {
       </div>
 
       {showModal && <RequestDetailsModal />}
+      </div>
     </div>
   );
 };

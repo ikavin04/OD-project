@@ -400,36 +400,35 @@ def send_od_status_email(student_email: str, student_name: str, od_request: ODRe
     """Send email notification for OD request status update"""
     try:
         # Create email subject
-        status_emoji = "✅" if status == "approved" else "❌"
-        subject = f"{status_emoji} OD Request {status.title()} - {od_request.event_name}"
+        subject = f"OD Request {status.title()} - {od_request.event_name}"
         
         # Create HTML email content
         if status == "approved":
             html_content = f"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
                 <div style="background: linear-gradient(135deg, #28a745, #20c997); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                    <h1 style="margin: 0; font-size: 28px;">🎓 KGISL College</h1>
+                    <h1 style="margin: 0; font-size: 28px;">KGISL College</h1>
                     <h2 style="margin: 10px 0 0 0; font-size: 20px;">OD Request Approved</h2>
                 </div>
                 
                 <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h3 style="color: #28a745; margin-top: 0;">🎉 Great News, {student_name}!</h3>
+                    <h3 style="color: #28a745; margin-top: 0;">Great News, {student_name}!</h3>
                     <p style="font-size: 16px; color: #333; line-height: 1.6;">Your On-Duty request has been <strong style="color: #28a745;">APPROVED</strong>.</p>
                     
                     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-                        <h4 style="margin: 0 0 15px 0; color: #333;">📋 Request Details:</h4>
+                        <h4 style="margin: 0 0 15px 0; color: #333;">Request Details:</h4>
                         <ul style="margin: 0; padding-left: 20px; color: #555;">
                             <li><strong>Event:</strong> {od_request.event_name}</li>
                             <li><strong>Duration:</strong> {od_request.from_date} to {od_request.to_date}</li>
                             <li><strong>Institution:</strong> {od_request.host_institution or od_request.college_name or 'N/A'}</li>
-                            <li><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">✅ APPROVED</span></li>
+                            <li><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">APPROVED</span></li>
                         </ul>
                     </div>
                     
-                    {f'<div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;"><h4 style="margin: 0 0 10px 0; color: #1976d2;">👩‍🏫 Faculty Comments:</h4><p style="margin: 0; font-style: italic; color: #333;">"{comments}"</p></div>' if comments else ''}
+                    {f'<div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;"><h4 style="margin: 0 0 10px 0; color: #1976d2;">Faculty Comments:</h4><p style="margin: 0; font-style: italic; color: #333;">"{comments}"</p></div>' if comments else ''}
                     
                     <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #ffeaa7;">
-                        <h4 style="margin: 0 0 10px 0; color: #856404;">🎯 Important - Proof Submission Requirements:</h4>
+                        <h4 style="margin: 0 0 10px 0; color: #856404;">Important - Proof Submission Requirements:</h4>
                         <ul style="margin: 0; padding-left: 20px; color: #856404;">
                             <li><strong>Step 1:</strong> Submit attendance proof (event brochure/live photo) within <strong>3 days</strong> after approval</li>
                             <li><strong>Step 2:</strong> Submit participation certificate within <strong>1 month</strong> after attendance proof</li>
@@ -450,7 +449,7 @@ def send_od_status_email(student_email: str, student_name: str, od_request: ODRe
             html_content = f"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
                 <div style="background: linear-gradient(135deg, #dc3545, #c82333); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                    <h1 style="margin: 0; font-size: 28px;">🎓 KGISL College</h1>
+                    <h1 style="margin: 0; font-size: 28px;">KGISL College</h1>
                     <h2 style="margin: 10px 0 0 0; font-size: 20px;">OD Request Update</h2>
                 </div>
                 

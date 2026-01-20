@@ -194,20 +194,21 @@ function ProofSubmission() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Proof Submission</h1>
-        <p className="text-gray-600 mt-1">Submit attendance proof and certificates for your approved OD requests</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Proof Submission</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Submit attendance proof and certificates for your approved OD requests</p>
+        </div>
 
       {/* Important Instructions */}
       <div className="card bg-blue-50 border-blue-200">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="h-6 w-6 text-blue-600 mt-1" />
+        <div className="flex items-start space-x-2 sm:space-x-3">
+          <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 mt-1 flex-shrink-0" />
           <div>
-            <h3 className="font-semibold text-blue-900 mb-2">Important Instructions</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
+            <h3 className="text-sm sm:text-base font-semibold text-blue-900 mb-2">Important Instructions</h3>
+            <ul className="text-xs sm:text-sm text-blue-800 space-y-1">
               <li>• <strong>Step 1:</strong> Submit attendance proof (event brochure/live photo) within 3 days after OD approval</li>
               <li>• <strong>Step 2:</strong> Submit participation certificate within 1 month after attendance proof submission</li>
               <li>• <strong>Note:</strong> You cannot apply for new OD requests until all proofs are submitted</li>
@@ -231,22 +232,22 @@ function ProofSubmission() {
             return (
               <div key={odRequest.id} className="card">
                 {/* OD Details Header */}
-                <div className="border-b border-gray-200 pb-4 mb-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{odRequest.event_name}</h3>
-                      <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                <div className="border-b border-gray-200 pb-4 mb-4 sm:mb-6">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">{odRequest.event_name}</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-600">
                         <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {format(new Date(odRequest.from_date), 'MMM dd')} - {format(new Date(odRequest.to_date), 'MMM dd, yyyy')}
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{format(new Date(odRequest.from_date), 'MMM dd')} - {format(new Date(odRequest.to_date), 'MMM dd, yyyy')}</span>
                         </div>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {odRequest.host_institution}
+                        <div className="flex items-center min-w-0">
+                          <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{odRequest.host_institution}</span>
                         </div>
                       </div>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                    <span className="px-3 py-1 bg-green-100 text-green-800 text-xs sm:text-sm font-medium rounded-full self-start flex-shrink-0">
                       Approved
                     </span>
                   </div>
@@ -255,41 +256,43 @@ function ProofSubmission() {
                 {/* Proof Submission Sections */}
                 <div className="space-y-6">
                   {/* Attendance Proof Section */}
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border ${getStatusColor(statusInfo.attendanceStatus)}`}>
+                  <div className="border rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full border ${getStatusColor(statusInfo.attendanceStatus)} w-fit`}>
                           {getStatusIcon(statusInfo.attendanceStatus)}
-                          <span className="font-medium">
+                          <span className="text-xs sm:text-sm font-medium">
                             {statusInfo.attendanceStatus === 'completed' ? 'Completed' :
                              statusInfo.attendanceStatus === 'overdue' ? 'Overdue' :
                              statusInfo.attendanceStatus === 'pending' ? 'Pending' : 'Not Available'}
                           </span>
                         </div>
                         {statusInfo.attendanceDaysLeft !== null && statusInfo.attendanceStatus === 'pending' && (
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs sm:text-sm text-gray-600">
                             {statusInfo.attendanceDaysLeft} day{statusInfo.attendanceDaysLeft !== 1 ? 's' : ''} left
                           </span>
                         )}
                       </div>
                       {statusInfo.deadlines.attendance_proof_deadline && (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           Due: {format(new Date(statusInfo.deadlines.attendance_proof_deadline), 'MMM dd, yyyy')}
                         </span>
                       )}
                     </div>
 
-                    <h4 className="font-medium text-gray-900 mb-2">Attendance Proof</h4>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Attendance Proof</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">
                       Upload event brochure, live photo, or any document that proves your attendance at the event.
                     </p>
 
                     {odRequest.attendance_proof ? (
-                      <div className="flex items-center space-x-2 text-green-600">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Submitted: {odRequest.attendance_proof.filename}
-                        </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-green-600">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-medium break-all">
+                            Submitted: {odRequest.attendance_proof.filename}
+                          </span>
+                        </div>
                         <span className="text-xs text-gray-500">
                           ({format(new Date(odRequest.attendance_proof.uploaded_at), 'MMM dd, yyyy')})
                         </span>
@@ -301,17 +304,17 @@ function ProofSubmission() {
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => handleFileSelect(odRequest.id, 'attendance', e.target.files[0])}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                         {selectedFiles[`${odRequest.id}-attendance`] && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-green-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm text-green-600 break-all flex-1">
                               ✓ Selected: {selectedFiles[`${odRequest.id}-attendance`].name}
                             </span>
                             <button
                               onClick={() => submitProof(odRequest.id, 'attendance')}
                               disabled={submittingProof[`${odRequest.id}-attendance`]}
-                              className="btn-primary text-sm disabled:opacity-50"
+                              className="btn-primary text-xs sm:text-sm disabled:opacity-50 w-full sm:w-auto whitespace-nowrap"
                             >
                               {submittingProof[`${odRequest.id}-attendance`] ? 'Submitting...' : 'Submit Attendance Proof'}
                             </button>
@@ -322,49 +325,51 @@ function ProofSubmission() {
                   </div>
 
                   {/* Certificate Section */}
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border ${getStatusColor(statusInfo.certificateStatus)}`}>
+                  <div className="border rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className={`flex items-center space-x-2 px-2 sm:px-3 py-1 rounded-full border ${getStatusColor(statusInfo.certificateStatus)} w-fit`}>
                           {getStatusIcon(statusInfo.certificateStatus)}
-                          <span className="font-medium">
+                          <span className="text-xs sm:text-sm font-medium">
                             {statusInfo.certificateStatus === 'completed' ? 'Completed' :
                              statusInfo.certificateStatus === 'overdue' ? 'Overdue' :
                              statusInfo.certificateStatus === 'pending' ? 'Pending' : 'Not Available'}
                           </span>
                         </div>
                         {statusInfo.certificateDaysLeft !== null && statusInfo.certificateStatus === 'pending' && (
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs sm:text-sm text-gray-600">
                             {statusInfo.certificateDaysLeft} day{statusInfo.certificateDaysLeft !== 1 ? 's' : ''} left
                           </span>
                         )}
                       </div>
                       {statusInfo.deadlines.certificate_deadline && (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           Due: {format(new Date(statusInfo.deadlines.certificate_deadline), 'MMM dd, yyyy')}
                         </span>
                       )}
                     </div>
 
-                    <h4 className="font-medium text-gray-900 mb-2">Participation Certificate</h4>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Participation Certificate</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-4">
                       Upload your participation certificate received from the event organizers.
                     </p>
 
                     {odRequest.certificate ? (
-                      <div className="flex items-center space-x-2 text-green-600">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          Submitted: {odRequest.certificate.filename}
-                        </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-green-600">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-medium break-all">
+                            Submitted: {odRequest.certificate.filename}
+                          </span>
+                        </div>
                         <span className="text-xs text-gray-500">
                           ({format(new Date(odRequest.certificate.uploaded_at), 'MMM dd, yyyy')})
                         </span>
                       </div>
                     ) : !odRequest.attendance_proof ? (
-                      <div className="flex items-center space-x-2 text-gray-500">
-                        <AlertCircle className="h-5 w-5" />
-                        <span className="text-sm">
+                      <div className="flex items-start gap-2 text-gray-500">
+                        <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm">
                           Submit attendance proof first before uploading certificate
                         </span>
                       </div>
@@ -375,17 +380,17 @@ function ProofSubmission() {
                           type="file"
                           accept="image/*,application/pdf"
                           onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
                         {selectedFiles[`${odRequest.id}-certificate`] && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-green-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <span className="text-xs sm:text-sm text-green-600 break-all flex-1">
                               ✓ Selected: {selectedFiles[`${odRequest.id}-certificate`].name}
                             </span>
                             <button
                               onClick={() => submitProof(odRequest.id, 'certificate')}
                               disabled={submittingProof[`${odRequest.id}-certificate`]}
-                              className="btn-primary text-sm disabled:opacity-50"
+                              className="btn-primary text-xs sm:text-sm disabled:opacity-50 w-full sm:w-auto whitespace-nowrap"
                             >
                               {submittingProof[`${odRequest.id}-certificate`] ? 'Submitting...' : 'Submit Certificate'}
                             </button>
@@ -399,6 +404,7 @@ function ProofSubmission() {
             );
           })
         )}
+      </div>
       </div>
     </div>
   );
