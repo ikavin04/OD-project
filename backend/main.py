@@ -1313,7 +1313,7 @@ def submit_attendance_proof(request_id):
     
     # Update status and set certificate deadline (1 month from now)
     od_request.proof_submission_status = ProofStatus.certificate_pending
-    od_request.certificate_submission_deadline = datetime.now(timezone.utc) + timedelta(days=30)
+    od_request.certificate_deadline = datetime.now(timezone.utc) + timedelta(days=30)
     
     try:
         db.session.commit()
@@ -1359,8 +1359,8 @@ def submit_certificate(request_id):
         return jsonify({'error': 'Please submit attendance proof first'}), 400
     
     # Check certificate submission deadline (1 month from attendance proof submission)
-    if od_request.certificate_submission_deadline:
-        deadline = od_request.certificate_submission_deadline
+    if od_request.certificate_deadline:
+        deadline = od_request.certificate_deadline
         if datetime.now(timezone.utc) > deadline:
             return jsonify({
                 'error': 'Certificate submission deadline has passed',
@@ -1400,7 +1400,7 @@ def submit_certificate(request_id):
             'error': 'Invalid certificate detected',
             'message': 'The uploaded file does not appear to be a valid participation certificate. Please ensure you upload a clear image of your certificate with visible text. The certificate must contain words like "Certificate", "Participation", "Awarded", or similar certification terms.',
             'confidence_score': round(confidence_score, 2),
-            'deadline_info': f'You have until {od_request.certificate_submission_deadline.strftime("%d-%m-%Y")} (1 month from attendance proof submission) to upload a valid certificate.'
+            'deadline_info': f'You have until {od_request.certificate_deadline.strftime("%d-%m-%Y")} (1 month from attendance proof submission) to upload a valid certificate.'
         }), 400
     
     print(f"Certificate validated successfully - Confidence: {confidence_score}%")
@@ -1613,12 +1613,23 @@ def handle_preflight():
 def after_request(response):
     """Add CORS headers to all responses including file downloads"""
     origin = request.headers.get('Origin')
-    if origin in ["http://localhost:3003", "http://localhost:3002", "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3003", "http://127.0.0.1:3002", "http://127.0.0.1:3001", "http://127.0.0.1:3000"]:
+    allowed_origins = ["http://localhost:3003", "http://localhost:3002", "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3003", "http://127.0.0.1:3002", "http://127.0.0.1:3001", "http://127.0.0.1:3000"]
+    
+    # Always add CORS headers for allowed origins
+    if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
         response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Content-Disposition, Authorization'
+    elif not origin:
+        # If no origin header, allow for local testing
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Content-Disposition, Authorization'
+    
     return response
 
 # ============================================================================
