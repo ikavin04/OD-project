@@ -13,6 +13,7 @@ import StudentDashboard from './components/student/StudentDashboard';
 import ProofSubmission from './components/student/ProofSubmission';
 import FacultyDashboard from './components/faculty/FacultyDashboard';
 import FacultyProfile from './components/faculty/FacultyProfile';
+import FacultyReports from './components/faculty/FacultyReports';
 import DebugPage from './components/debug/DebugPage';
 
 // Create a client
@@ -94,6 +95,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['faculty', 'hod', 'admin']}>
               <FacultyProfile />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Faculty Reports */}
+        <Route 
+          path="/faculty/reports" 
+          element={
+            <ProtectedRoute allowedRoles={['faculty', 'hod', 'admin']}>
+              <FacultyReports />
             </ProtectedRoute>
           } 
         />

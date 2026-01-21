@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, GraduationCap, User, Upload, Home, Menu, X as CloseIcon } from 'lucide-react';
+import { LogOut, GraduationCap, User, Upload, Home, Menu, X as CloseIcon, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Header = () => {
@@ -79,6 +79,17 @@ const Header = () => {
                 >
                   <Home className="h-4 w-4" />
                   <span>OD Requests</span>
+                </Link>
+                <Link
+                  to="/faculty/reports"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                    isActive('/faculty/reports')
+                      ? 'text-blue-700 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Reports</span>
                 </Link>
                 <Link
                   to="/faculty/profile"
@@ -198,6 +209,18 @@ const Header = () => {
                 >
                   <Home className="h-5 w-5" />
                   <span>OD Requests</span>
+                </Link>
+                <Link
+                  to="/faculty/reports"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                    isActive('/faculty/reports')
+                      ? 'text-blue-700 bg-blue-50'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Reports</span>
                 </Link>
                 <Link
                   to="/faculty/profile"
