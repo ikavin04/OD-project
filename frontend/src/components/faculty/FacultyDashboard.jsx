@@ -63,18 +63,18 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
 
   if (loading) {
     return (
-      <div className={`${className} flex items-center justify-center bg-gray-100`}>
-        <div className="text-sm text-gray-500">Loading image...</div>
+      <div className={`${className} flex items-center justify-center bg-secondary-100`}>
+        <div className="text-sm text-secondary-500">Loading image...</div>
       </div>
     );
   }
 
   if (error || !imageSrc) {
     return (
-      <div className={`${className} flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4`}>
-        <FileText className="h-12 w-12 text-gray-400 mb-2" />
-        <div className="text-sm text-gray-600 font-medium">Document not available</div>
-        <div className="text-xs text-gray-500 mt-1">File may have been removed or not uploaded</div>
+      <div className={`${className} flex flex-col items-center justify-center bg-secondary-50 border-2 border-dashed border-secondary-300 rounded-lg p-4`}>
+        <FileText className="h-12 w-12 text-secondary-400 mb-2" />
+        <div className="text-sm text-secondary-600 font-medium">Document not available</div>
+        <div className="text-xs text-secondary-500 mt-1">File may have been removed or not uploaded</div>
       </div>
     );
   }
@@ -126,16 +126,16 @@ const AuthenticatedDocument = ({ requestId, fileType, className, onClick }) => {
 
   if (loading) {
     return (
-      <div className={`${className} flex items-center justify-center bg-gray-100`}>
-        <div className="text-sm text-gray-500">Loading document...</div>
+      <div className={`${className} flex items-center justify-center bg-secondary-100`}>
+        <div className="text-sm text-secondary-500">Loading document...</div>
       </div>
     );
   }
   if (error || !src) {
     return (
-      <div className={`${className} flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4`}>
-        <FileText className="h-12 w-12 text-gray-400 mb-2" />
-        <div className="text-sm text-gray-600 font-medium">Document not available</div>
+      <div className={`${className} flex flex-col items-center justify-center bg-secondary-50 border-2 border-dashed border-secondary-300 rounded-lg p-4`}>
+        <FileText className="h-12 w-12 text-secondary-400 mb-2" />
+        <div className="text-sm text-secondary-600 font-medium">Document not available</div>
       </div>
     );
   }
@@ -417,13 +417,13 @@ const FacultyDashboard = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
+        return <Clock className="h-5 w-5 text-secondary-500" />;
       case 'approved':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-primary-500" />;
       case 'rejected':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-secondary-600" />;
       default:
-        return <Clock className="h-5 w-5 text-gray-500" />;
+        return <Clock className="h-5 w-5 text-secondary-500" />;
     }
   };
 
@@ -436,7 +436,7 @@ const FacultyDashboard = () => {
       case 'rejected':
         return 'status-badge status-rejected';
       default:
-        return 'status-badge bg-gray-100 text-gray-800';
+        return 'status-badge bg-secondary-100 text-secondary-800';
     }
   };
 
@@ -450,10 +450,10 @@ const FacultyDashboard = () => {
         <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">OD Request Details</h2>
+              <h2 className="text-xl font-semibold text-secondary-900">OD Request Details</h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-secondary-400 hover:text-secondary-600"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -461,39 +461,39 @@ const FacultyDashboard = () => {
 
             <div className="space-y-6">
               {/* Student Information */}
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Student Information</h3>
+              <div className="border-b border-secondary-200 pb-4">
+                <h3 className="text-lg font-medium text-secondary-900 mb-3">Student Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Name</label>
-                    <p className="text-gray-900">{selectedRequest.student?.name}</p>
+                    <label className="text-sm font-medium text-secondary-600">Name</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.name}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Roll Number</label>
-                    <p className="text-gray-900">{selectedRequest.student?.roll_number}</p>
+                    <label className="text-sm font-medium text-secondary-600">Roll Number</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.roll_number}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Email</label>
-                    <p className="text-gray-900">{selectedRequest.student?.email}</p>
+                    <label className="text-sm font-medium text-secondary-600">Email</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.email}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Department</label>
-                    <p className="text-gray-900">{selectedRequest.student?.department}</p>
+                    <label className="text-sm font-medium text-secondary-600">Department</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.department}</p>
                   </div>
                 </div>
               </div>
 
               {/* Request Information */}
-              <div className="border-b border-gray-200 pb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Request Details</h3>
+              <div className="border-b border-secondary-200 pb-4">
+                <h3 className="text-lg font-medium text-secondary-900 mb-3">Request Details</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Event Name</label>
-                    <p className="text-gray-900">{selectedRequest.event_name}</p>
+                    <label className="text-sm font-medium text-secondary-600">Event Name</label>
+                    <p className="text-secondary-900">{selectedRequest.event_name}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">OD Type</label>
-                    <p className="text-gray-900">
+                    <label className="text-sm font-medium text-secondary-600">OD Type</label>
+                    <p className="text-secondary-900">
                       {selectedRequest.od_type === 'intra_college' ? 'Intra-college' :
                        selectedRequest.od_type === 'inter_college_coimbatore' ? 'Inter-college (Coimbatore)' :
                        selectedRequest.od_type === 'inter_college_others' ? 'Inter-college (Others)' :

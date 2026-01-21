@@ -258,10 +258,10 @@ function StudentDashboard() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'text-yellow-600';
-      case 'approved': return 'text-green-600';
-      case 'rejected': return 'text-red-600';
-      default: return 'text-gray-600';
+      case 'pending': return 'text-secondary-600';
+      case 'approved': return 'text-primary-600';
+      case 'rejected': return 'text-secondary-700';
+      default: return 'text-secondary-600';
     }
   };
 
@@ -277,7 +277,7 @@ function StudentDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -287,8 +287,8 @@ function StudentDashboard() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome, {user?.name}</p>
+          <h1 className="text-3xl font-bold text-secondary-900">Student Dashboard</h1>
+          <p className="text-secondary-600 mt-1">Welcome, {user?.name}</p>
         </div>
         <button
           onClick={() => setShowNewRequestForm(!showNewRequestForm)}
@@ -301,12 +301,12 @@ function StudentDashboard() {
 
       {/* Overdue Proof Notifications */}
       {pendingProofs.length > 0 && (
-        <div className="card bg-red-50 border-red-200">
+        <div className="card bg-secondary-100 border-secondary-300">
           <div className="flex items-start space-x-3">
-            <AlertCircle className="h-6 w-6 text-red-600 mt-1" />
+            <AlertCircle className="h-6 w-6 text-secondary-700 mt-1" />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-2">Urgent: Overdue Proof Submissions</h3>
-              <p className="text-sm text-red-800 mb-3">
+              <h3 className="font-semibold text-secondary-900 mb-2">Urgent: Overdue Proof Submissions</h3>
+              <p className="text-sm text-secondary-800 mb-3">
                 You have {pendingProofs.length} OD request{pendingProofs.length > 1 ? 's' : ''} with overdue proof submissions. 
                 You cannot apply for new OD requests until these are completed.
               </p>
@@ -332,7 +332,7 @@ function StudentDashboard() {
                   }
                   
                   return (
-                    <div key={request.id} className="text-sm text-red-700 bg-red-100 rounded p-2">
+                    <div key={request.id} className="text-sm text-secondary-700 bg-secondary-200 rounded p-2">
                       <strong>{request.event_name}</strong> - {overdueType} overdue by {daysOverdue} day{daysOverdue > 1 ? 's' : ''}
                     </div>
                   );
@@ -340,7 +340,7 @@ function StudentDashboard() {
               </div>
               <Link
                 to="/student/proofs"
-                className="inline-flex items-center space-x-1 mt-3 text-sm font-medium text-red-700 hover:text-red-900"
+                className="inline-flex items-center space-x-1 mt-3 text-sm font-medium text-primary-700 hover:text-primary-900"
               >
                 <Upload className="h-4 w-4" />
                 <span>Submit Proofs Now</span>
@@ -354,12 +354,12 @@ function StudentDashboard() {
       {/* New Request Form */}
       {showNewRequestForm && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Submit New OD Request</h2>
+          <h2 className="text-xl font-semibold text-secondary-900 mb-6">Submit New OD Request</h2>
           
           <form onSubmit={handleSubmitRequest} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="event_name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="event_name" className="block text-sm font-medium text-secondary-700">
                   Event Name *
                 </label>
                 <input
@@ -375,7 +375,7 @@ function StudentDashboard() {
               </div>
 
               <div>
-                <label htmlFor="od_type" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="od_type" className="block text-sm font-medium text-secondary-700">
                   OD Type *
                 </label>
                 <select
@@ -395,7 +395,7 @@ function StudentDashboard() {
 
               {(newRequest.od_type === 'inter_college_coimbatore' || newRequest.od_type === 'inter_college_others') && (
                 <div>
-                  <label htmlFor="location_type" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="location_type" className="block text-sm font-medium text-secondary-700">
                     Location Type *
                   </label>
                   <select
@@ -405,14 +405,14 @@ function StudentDashboard() {
                     value={newRequest.location_type}
                     onChange={handleInputChange}
                     disabled={newRequest.od_type === 'inter_college_coimbatore'}
-                    className={`input-field mt-1 ${newRequest.od_type === 'inter_college_coimbatore' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    className={`input-field mt-1 ${newRequest.od_type === 'inter_college_coimbatore' ? 'bg-secondary-100 cursor-not-allowed' : ''}`}
                   >
                     <option value="">Select Location Type</option>
                     <option value="within_state">Within State</option>
                     <option value="out_of_state">Out of State</option>
                   </select>
                   {newRequest.od_type === 'inter_college_coimbatore' && (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-secondary-500">
                       Automatically set to "Within State" for Coimbatore institutions
                     </p>
                   )}
@@ -420,7 +420,7 @@ function StudentDashboard() {
               )}
 
               <div>
-                <label htmlFor="host_institution" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="host_institution" className="block text-sm font-medium text-secondary-700">
                   Host Institution *
                 </label>
                 {newRequest.od_type === 'inter_college_coimbatore' ? (
@@ -455,7 +455,7 @@ function StudentDashboard() {
               </div>
 
               <div>
-                <label htmlFor="from_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="from_date" className="block text-sm font-medium text-secondary-700">
                   Start Date *
                 </label>
                 <input
@@ -470,7 +470,7 @@ function StudentDashboard() {
               </div>
 
               <div>
-                <label htmlFor="to_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="to_date" className="block text-sm font-medium text-secondary-700">
                   End Date *
                 </label>
                 <input
@@ -486,7 +486,7 @@ function StudentDashboard() {
             </div>
 
             <div>
-              <label htmlFor="event_description" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="event_description" className="block text-sm font-medium text-secondary-700">
                 Event Description
               </label>
               <textarea
@@ -501,7 +501,7 @@ function StudentDashboard() {
             </div>
 
             <div>
-              <label htmlFor="permission_image" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="permission_image" className="block text-sm font-medium text-secondary-700">
                 Permission Document *
               </label>
               <input
@@ -511,18 +511,18 @@ function StudentDashboard() {
                 accept="image/jpeg,image/jpg,image/png,image/gif"
                 onChange={handleFileChange}
                 required
-                className="mt-1 block w-full text-sm text-gray-500
+                className="mt-1 block w-full text-sm text-secondary-500
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-md file:border-0
                 file:text-sm file:font-medium
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
+                file:bg-primary-50 file:text-primary-700
+                hover:file:bg-primary-100"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-secondary-500">
                 Upload permission document in image format (JPEG, PNG, GIF). Max size: 5MB
               </p>
               {permissionImage && (
-                <p className="mt-2 text-sm text-green-600">
+                <p className="mt-2 text-sm text-primary-600">
                   ✓ Selected: {permissionImage.name}
                 </p>
               )}
@@ -550,18 +550,18 @@ function StudentDashboard() {
 
       {/* OD Requests List */}
       <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Your OD Requests</h2>
+        <h2 className="text-xl font-semibold text-secondary-900 mb-6">Your OD Requests</h2>
         
         {odRequests.length === 0 ? (
           <div className="text-center py-8">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No OD requests found</p>
-            <p className="text-sm text-gray-400 mt-1">Submit your first OD request to get started</p>
+            <FileText className="h-12 w-12 text-secondary-400 mx-auto mb-4" />
+            <p className="text-secondary-500">No OD requests found</p>
+            <p className="text-sm text-secondary-400 mt-1">Submit your first OD request to get started</p>
           </div>
         ) : (
           <div className="space-y-4">
             {odRequests.map((request) => (
-              <div key={request.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+              <div key={request.id} className="border border-secondary-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center space-x-3">
                     <div className={`flex items-center space-x-2 ${getStatusColor(request.status)}`}>
@@ -569,51 +569,51 @@ function StudentDashboard() {
                       <span className="font-medium capitalize">{request.status}</span>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-500">#{request.id}</span>
+                  <span className="text-sm text-secondary-500">#{request.id}</span>
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{request.event_name}</h3>
+                <h3 className="text-lg font-semibold text-secondary-900 mb-2">{request.event_name}</h3>
                 
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-gray-600">
+                  <div className="flex items-center text-secondary-600">
                     <Calendar className="h-4 w-4 mr-2" />
                     <span className="text-sm">
                       {format(new Date(request.from_date), 'MMM dd, yyyy')} - {format(new Date(request.to_date), 'MMM dd, yyyy')}
                     </span>
                   </div>
-                  <div className="flex items-center text-gray-600">
+                  <div className="flex items-center text-secondary-600">
                     <MapPin className="h-4 w-4 mr-2" />
                     <span className="text-sm">{request.host_institution || request.venue || 'N/A'}</span>
                     {(request.od_type === 'inter_college_coimbatore' || request.od_type === 'inter_college_others') && request.location_type && (
-                      <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                      <span className="ml-2 px-2 py-1 text-xs bg-secondary-100 text-secondary-600 rounded-full">
                         {request.location_type === 'within_state' ? 'Within State' : 'Out of State'}
                       </span>
                     )}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-secondary-600">
                     Submitted: {format(new Date(request.created_at), 'MMM dd, yyyy')}
                   </div>
                 </div>
 
                 {request.event_description && (
-                  <p className="text-gray-600 text-sm mb-4">{request.event_description}</p>
+                  <p className="text-secondary-600 text-sm mb-4">{request.event_description}</p>
                 )}
 
                 {/* Proof Submission Section */}
                 {request.status === 'pending' && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="mt-4 p-3 bg-primary-50 border border-primary-200 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Upload className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Proof Submission</span>
+                      <Upload className="h-4 w-4 text-primary-600" />
+                      <span className="text-sm font-medium text-primary-800">Proof Submission</span>
                     </div>
-                    <p className="text-xs text-blue-600 mb-3">
+                    <p className="text-xs text-primary-600 mb-3">
                       After approval, you'll need to submit attendance proof within 3 days and certificate within 1 month.
                     </p>
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-secondary-600">
                         <strong>Step 1:</strong> Attendance Proof (event brochure/live photo) - Due 3 days after approval
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-secondary-600">
                         <strong>Step 2:</strong> Participation Certificate - Due 1 month after attendance proof
                       </div>
                     </div>
@@ -630,13 +630,13 @@ function StudentDashboard() {
                       
                       if (hasCertificate) {
                         return (
-                          <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+                          <div className="flex items-center p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-primary-600 mr-3" />
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-green-800">
+                              <p className="text-sm font-medium text-primary-800">
                                 All proofs submitted
                               </p>
-                              <p className="text-xs text-green-600 mt-1">
+                              <p className="text-xs text-primary-600 mt-1">
                                 Attendance proof and certificate completed
                               </p>
                             </div>
@@ -649,19 +649,19 @@ function StudentDashboard() {
                         
                         return (
                           <div className={`flex items-center p-3 border rounded-lg ${
-                            isOverdue ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+                            isOverdue ? 'bg-secondary-100 border-secondary-300' : 'bg-secondary-50 border-secondary-200'
                           }`}>
                             <AlertCircle className={`h-5 w-5 mr-3 ${
-                              isOverdue ? 'text-red-600' : 'text-yellow-600'
+                              isOverdue ? 'text-secondary-700' : 'text-secondary-600'
                             }`} />
                             <div className="flex-1">
                               <p className={`text-sm font-medium ${
-                                isOverdue ? 'text-red-800' : 'text-yellow-800'
+                                isOverdue ? 'text-secondary-900' : 'text-secondary-800'
                               }`}>
                                 {isOverdue ? 'Certificate submission overdue' : 'Certificate submission pending'}
                               </p>
                               <p className={`text-xs mt-1 ${
-                                isOverdue ? 'text-red-600' : 'text-yellow-600'
+                                isOverdue ? 'text-secondary-700' : 'text-secondary-600'
                               }`}>
                                 {isOverdue 
                                   ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) > 1 ? 's' : ''}`
@@ -673,7 +673,7 @@ function StudentDashboard() {
                             </div>
                             <Link
                               to="/student/proofs"
-                              className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                              className="text-xs font-medium text-primary-600 hover:text-primary-800"
                             >
                               Submit Now
                             </Link>
@@ -686,19 +686,19 @@ function StudentDashboard() {
                         
                         return (
                           <div className={`flex items-center p-3 border rounded-lg ${
-                            isOverdue ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+                            isOverdue ? 'bg-secondary-100 border-secondary-300' : 'bg-secondary-50 border-secondary-200'
                           }`}>
                             <AlertCircle className={`h-5 w-5 mr-3 ${
-                              isOverdue ? 'text-red-600' : 'text-yellow-600'
+                              isOverdue ? 'text-secondary-700' : 'text-secondary-600'
                             }`} />
                             <div className="flex-1">
                               <p className={`text-sm font-medium ${
-                                isOverdue ? 'text-red-800' : 'text-yellow-800'
+                                isOverdue ? 'text-secondary-900' : 'text-secondary-800'
                               }`}>
                                 {isOverdue ? 'Attendance proof overdue' : 'Attendance proof required'}
                               </p>
                               <p className={`text-xs mt-1 ${
-                                isOverdue ? 'text-red-600' : 'text-yellow-600'
+                                isOverdue ? 'text-secondary-700' : 'text-secondary-600'
                               }`}>
                                 {isOverdue 
                                   ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) > 1 ? 's' : ''}`
@@ -710,7 +710,7 @@ function StudentDashboard() {
                             </div>
                             <Link
                               to="/student/proofs"
-                              className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                              className="text-xs font-medium text-primary-600 hover:text-primary-800"
                             >
                               Submit Now
                             </Link>

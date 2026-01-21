@@ -111,32 +111,32 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary-50 to-secondary-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-600 text-white">
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-500 text-white">
             <GraduationCap className="h-6 w-6" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-3xl font-bold text-secondary-900">
             OD Management System
           </h2>
-          <p className="mt-2 text-sm font-semibold text-blue-600">
+          <p className="mt-2 text-sm font-semibold text-primary-600">
             KGiSL Institute of Technology
           </p>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-secondary-600">
             Sign in to your account
           </p>
         </div>
 
         {/* User Type Selector */}
-        <div className="flex space-x-4 bg-gray-100 p-1 rounded-lg">
+        <div className="flex space-x-4 bg-secondary-100 p-1 rounded-lg">
           <button
             type="button"
             onClick={() => handleUserTypeChange('student')}
             className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               userType === 'student'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-secondary-500 hover:text-secondary-700'
             }`}
           >
             <User className="h-4 w-4 mr-2" />
@@ -147,8 +147,8 @@ const LoginForm = () => {
             onClick={() => handleUserTypeChange('faculty')}
             className={`flex-1 flex items-center justify-center py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               userType === 'faculty'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-primary-600 shadow-sm'
+                : 'text-secondary-500 hover:text-secondary-700'
             }`}
           >
             <Users className="h-4 w-4 mr-2" />
@@ -177,16 +177,16 @@ const LoginForm = () => {
                   className="input-field pl-10"
                   placeholder={userType === 'student' ? 'student@college.edu' : 'faculty@college.edu'}
                 />
-                <Mail className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <Mail className="h-5 w-5 text-secondary-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               </div>
             </div>
 
             {/* Roll Number Field (Students Only) */}
             {userType === 'student' && (
               <div>
-                <label htmlFor="rollNumber" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="rollNumber" className="block text-sm font-medium text-secondary-700">
                   Roll Number
-                  <span className="text-gray-500 font-normal"> (or use email above)</span>
+                  <span className="text-secondary-500 font-normal"> (or use email above)</span>
                 </label>
                 <div className="mt-1 relative">
                   <input
@@ -199,14 +199,14 @@ const LoginForm = () => {
                     className="input-field pl-10"
                     placeholder="CS2021001"
                   />
-                  <User className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <User className="h-5 w-5 text-secondary-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 </div>
               </div>
             )}
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-secondary-700">
                 Password
               </label>
               <div className="mt-1 relative">
@@ -227,9 +227,9 @@ const LoginForm = () => {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-secondary-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-secondary-400" />
                   )}
                 </button>
               </div>
@@ -243,9 +243,9 @@ const LoginForm = () => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-secondary-300 rounded cursor-pointer"
               />
-              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-secondary-700 cursor-pointer">
                 Keep me logged in
               </label>
             </div>
@@ -255,7 +255,7 @@ const LoginForm = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               {isLoading ? (
                 <div className="flex items-center">
@@ -269,9 +269,9 @@ const LoginForm = () => {
           </div>
 
           {/* Default Credentials Info */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Test Login Credentials:</h4>
-            <div className="text-xs text-gray-600 space-y-1">
+          <div className="mt-4 p-4 bg-secondary-50 rounded-lg">
+            <h4 className="text-sm font-medium text-secondary-700 mb-2">Test Login Credentials:</h4>
+            <div className="text-xs text-secondary-600 space-y-1">
               <div><strong>Student:</strong> 24ucs158manisha@kgkite.ac.in / Kgkite@1234</div>
               <div><strong>Roll Number:</strong> 24UCS158</div>
               <div><strong>Faculty:</strong> dr.rajesh@kgkite.ac.in / Faculty@123</div>

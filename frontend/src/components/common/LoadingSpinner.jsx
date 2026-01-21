@@ -9,8 +9,8 @@ const LoadingSpinner = ({ size = 'large', text = 'Loading...' }) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[200px]">
-      <div className={`${sizeClasses[size]} animate-spin rounded-full border-4 border-gray-200 border-t-blue-600`} />
-      <p className="mt-4 text-gray-600 font-medium">{text}</p>
+      <div className={`${sizeClasses[size]} animate-spin rounded-full border-4 border-secondary-200 border-t-primary-600`} />
+      <p className="mt-4 text-secondary-600 font-medium">{text}</p>
     </div>
   );
 };
