@@ -168,10 +168,39 @@ const FacultyDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = React.useRef(0);
+  const pullDistance = React.useRef(0);
 
   useEffect(() => {
     fetchODRequests();
-  }, [yearFilter, sectionFilter]);
+    
+    // Pull-to-refresh for mobile
+    const handleTouchStart = (e) => {
+      if (window.scrollY === 0) {
+        startY.current = e.touches[0].pageY;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (window.scrollY === 0 && !refreshing) {
+        const currentY = e.touches[0].pageY;
+        pullDistance.current = currentY - startY.current;
+        
+        if (pullDistance.current > 80) {
+          handleRefresh();
+        }
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [yearFilter, sectionFilter, refreshing]);
 
   const fetchODRequests = async () => {
     try {
@@ -225,7 +254,14 @@ const FacultyDashboard = () => {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchODRequests();
+    toast.success('Refreshed!');
   };
 
   const handleApproveReject = async (requestId, action, reason = '') => {

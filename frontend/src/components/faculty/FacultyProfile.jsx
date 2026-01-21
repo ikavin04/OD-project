@@ -134,7 +134,16 @@ const FacultyProfile = () => {
                 {editMode ? (
                   <select
                     value={formData.faculty_type}
-                    onChange={(e) => setFormData({ ...formData, faculty_type: e.target.value })}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        faculty_type: newType,
+                        // Clear year and section if Class Handling is selected
+                        assigned_year: newType === 'Class Handling' ? '' : formData.assigned_year,
+                        assigned_section: newType === 'Class Handling' ? '' : formData.assigned_section
+                      });
+                    }}
                     className="input-field text-sm sm:text-base"
                     required
                   >
@@ -163,6 +172,7 @@ const FacultyProfile = () => {
                     value={formData.assigned_year}
                     onChange={(e) => setFormData({ ...formData, assigned_year: e.target.value })}
                     className="input-field text-sm sm:text-base"
+                    disabled={formData.faculty_type === 'Class Handling'}
                   >
                     <option value="">Select Year</option>
                     <option value="2">2nd Year</option>
@@ -173,6 +183,11 @@ const FacultyProfile = () => {
                   <div className="input-field bg-gray-50 text-sm sm:text-base">
                     {facultyData?.assigned_year ? `${facultyData.assigned_year}nd/rd/th Year` : 'Not assigned'}
                   </div>
+                )}
+                {formData.faculty_type === 'Class Handling' && editMode && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    Not required for Class Handling faculty
+                  </p>
                 )}
               </div>
 
@@ -185,6 +200,7 @@ const FacultyProfile = () => {
                     value={formData.assigned_section}
                     onChange={(e) => setFormData({ ...formData, assigned_section: e.target.value })}
                     className="input-field text-sm sm:text-base"
+                    disabled={formData.faculty_type === 'Class Handling'}
                   >
                     <option value="">All Sections</option>
                     <option value="A">Section A</option>
@@ -194,6 +210,11 @@ const FacultyProfile = () => {
                   <div className="input-field bg-gray-50 text-sm sm:text-base">
                     {facultyData?.assigned_section ? `Section ${facultyData.assigned_section}` : 'All sections'}
                   </div>
+                )}
+                {formData.faculty_type === 'Class Handling' && editMode && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    Not required for Class Handling faculty
+                  </p>
                 )}
               </div>
             </div>

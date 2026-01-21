@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Upload, 
@@ -7,7 +7,8 @@ import {
   AlertCircle, 
   Calendar,
   FileText,
-  MapPin
+  MapPin,
+  Camera
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -19,10 +20,39 @@ function ProofSubmission() {
   const [loading, setLoading] = useState(true);
   const [submittingProof, setSubmittingProof] = useState({});
   const [selectedFiles, setSelectedFiles] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef(0);
+  const pullDistance = useRef(0);
 
   useEffect(() => {
     fetchApprovedODRequests();
-  }, []);
+    
+    // Pull-to-refresh for mobile
+    const handleTouchStart = (e) => {
+      if (window.scrollY === 0) {
+        startY.current = e.touches[0].pageY;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (window.scrollY === 0 && !refreshing) {
+        const currentY = e.touches[0].pageY;
+        pullDistance.current = currentY - startY.current;
+        
+        if (pullDistance.current > 80) {
+          handleRefresh();
+        }
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [refreshing]);
 
   const fetchApprovedODRequests = async () => {
     try {
@@ -39,7 +69,14 @@ function ProofSubmission() {
       toast.error('Failed to load OD requests');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchApprovedODRequests();
+    toast.success('Refreshed!');
   };
 
   const handleFileSelect = (odId, proofType, file) => {
@@ -60,6 +97,23 @@ function ProofSubmission() {
       ...prev,
       [`${odId}-${proofType}`]: file
     }));
+  };
+
+  const handleCameraCapture = (odId, proofType) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // Use rear camera on mobile
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleFileSelect(odId, proofType, file);
+        toast.success('Photo captured!');
+      }
+    };
+    
+    input.click();
   };
 
   const submitProof = async (odId, proofType) => {
@@ -299,13 +353,25 @@ function ProofSubmission() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <input
-                          id={`file-${odRequest.id}-attendance`}
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleFileSelect(odRequest.id, 'attendance', e.target.files[0])}
-                          className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="flex-1">
+                            <input
+                              id={`file-${odRequest.id}-attendance`}
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => handleFileSelect(odRequest.id, 'attendance', e.target.files[0])}
+                              className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleCameraCapture(odRequest.id, 'attendance')}
+                            className="btn-secondary flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap"
+                            type="button"
+                          >
+                            <Camera className="h-4 w-4" />
+                            <span className="text-xs sm:text-sm">Take Photo</span>
+                          </button>
+                        </div>
                         {selectedFiles[`${odRequest.id}-attendance`] && (
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <span className="text-xs sm:text-sm text-green-600 break-all flex-1">
@@ -375,13 +441,25 @@ function ProofSubmission() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <input
-                          id={`file-${odRequest.id}-certificate`}
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
-                          className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="flex-1">
+                            <input
+                              id={`file-${odRequest.id}-certificate`}
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
+                              className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleCameraCapture(odRequest.id, 'certificate')}
+                            className="btn-secondary flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap"
+                            type="button"
+                          >
+                            <Camera className="h-4 w-4" />
+                            <span className="text-xs sm:text-sm">Take Photo</span>
+                          </button>
+                        </div>
                         {selectedFiles[`${odRequest.id}-certificate`] && (
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <span className="text-xs sm:text-sm text-green-600 break-all flex-1">
