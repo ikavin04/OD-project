@@ -480,6 +480,14 @@ const FacultyDashboard = () => {
                     <label className="text-sm font-medium text-secondary-600">Department</label>
                     <p className="text-secondary-900">{selectedRequest.student?.department}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-secondary-600">Year</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.year ? `${selectedRequest.student.year}${selectedRequest.student.year === 1 ? 'st' : selectedRequest.student.year === 2 ? 'nd' : selectedRequest.student.year === 3 ? 'rd' : 'th'} Year` : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-secondary-600">Section</label>
+                    <p className="text-secondary-900">{selectedRequest.student?.section || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
 
@@ -578,7 +586,7 @@ const FacultyDashboard = () => {
                         className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
                         <Eye className="h-4 w-4 mr-2" />
-                        � View Document
+                        View Document
                       </button>
                     </div>
                     
