@@ -114,11 +114,15 @@ const LoginForm = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary-50 to-secondary-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-500 text-white">
-            <GraduationCap className="h-6 w-6" />
+          <div className="mx-auto flex items-center justify-center">
+            <img 
+              src="https://miro.medium.com/v2/resize:fit:2400/1*aDT5b3T7zBUNALBRlikHjg.jpeg" 
+              alt="College Logo" 
+              className="h-20 w-auto object-contain"
+            />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-secondary-900">
-            OD Management System
+            Students on-duty management system
           </h2>
           <p className="mt-2 text-sm font-semibold text-primary-600">
             KGiSL Institute of Technology

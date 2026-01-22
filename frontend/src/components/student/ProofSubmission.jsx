@@ -80,10 +80,21 @@ function ProofSubmission() {
   };
 
   const handleFileSelect = (odId, proofType, file) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+    let allowedTypes;
+    let errorMessage;
+    
+    if (proofType === 'certificate') {
+      // Certificate: PDF only
+      allowedTypes = ['application/pdf'];
+      errorMessage = 'Please upload only PDF documents for participation certificate';
+    } else {
+      // Attendance proof: PDF, JPG, PNG
+      allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      errorMessage = 'Please upload only image files (JPEG, PNG) or PDF documents';
+    }
     
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Please upload only image files (JPEG, PNG, GIF) or PDF documents');
+      toast.error(errorMessage);
       return;
     }
     
@@ -358,7 +369,7 @@ function ProofSubmission() {
                             <input
                               id={`file-${odRequest.id}-attendance`}
                               type="file"
-                              accept="image/*,application/pdf"
+                              accept="image/jpeg,image/jpg,image/png,application/pdf"
                               onChange={(e) => handleFileSelect(odRequest.id, 'attendance', e.target.files[0])}
                               className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
@@ -417,7 +428,7 @@ function ProofSubmission() {
 
                     <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Participation Certificate</h4>
                     <p className="text-xs sm:text-sm text-gray-600 mb-4">
-                      Upload your participation certificate received from the event organizers.
+                      Upload your participation certificate received from the event organizers in PDF format
                     </p>
 
                     {odRequest.certificate ? (
@@ -441,24 +452,14 @@ function ProofSubmission() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <div className="flex-1">
-                            <input
-                              id={`file-${odRequest.id}-certificate`}
-                              type="file"
-                              accept="image/*,application/pdf"
-                              onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
-                              className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                            />
-                          </div>
-                          <button
-                            onClick={() => handleCameraCapture(odRequest.id, 'certificate')}
-                            className="btn-secondary flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap"
-                            type="button"
-                          >
-                            <Camera className="h-4 w-4" />
-                            <span className="text-xs sm:text-sm">Take Photo</span>
-                          </button>
+                        <div>
+                          <input
+                            id={`file-${odRequest.id}-certificate`}
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) => handleFileSelect(odRequest.id, 'certificate', e.target.files[0])}
+                            className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-md file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          />
                         </div>
                         {selectedFiles[`${odRequest.id}-certificate`] && (
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">

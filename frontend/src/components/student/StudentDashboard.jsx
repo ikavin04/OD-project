@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -17,60 +17,416 @@ import { format, differenceInDays } from 'date-fns';
 import toast from 'react-hot-toast';
 import api from '../../utils/api';
 
-// Coimbatore institutions list
-const COIMBATORE_INSTITUTIONS = [
-  'KPR Institute of Engineering and Technology',
-  'PSG College of Technology',
-  'PPG Institute of Technology ppgit',
-  'Adithya Institute of Technology',
-  'Akshaya College of Engineering and Technology',
-  'Amrita School of Engineering',
-  'Arjun College of Technology',
-  'Coimbatore Institute of Technology',
-  'Coimbatore Institute of Engineering and Technology',
-  'Dr.N.G.P.Institute of technology',
-  'Government College of Technology',
-  'Hindusthan Institute of Technology',
-  'Indus College of Engineering Coimbatore',
-  'Info Institute of Engineering',
-  'JCT College of Engineering and Technology',
-  'Kathir College of Engineering',
-  'Kalaignar Karunanidhi Institute of Technology',
-  'Kalaivani College of Technology',
-  'Karpagam College of Engineering',
+// Coimbatore institutions list - replaced with Tamil Nadu colleges list
+const TAMILNADU_COLLEGES = [
+  'Ponjesly College of Engineering, Agesteeswaram',
+  'SACS M.A.V.M.M. Engineering College, AlagarKoil',
+  'M.N.S.K. College of Engineering, Alangudy Taluk',
+  'SCAD College of Engineering, Ambasamudram',
+  'Udaya School of Engineering, Ammandivilai Post',
+  'B.K.R. College of Engineering and Technology, Arakkonam',
+  'Jeyamatha Engineering College, Aralvaimozhi',
+  'V.S.B. Engineering College, Aravakkurichi Taluk',
+  'Anna University Tiruchirappali, Ariyalur',
+  'Sri Balaji Chockalingam Engineering College, Arni Taluk',
+  'Sree Sowdambika College of Engineering, Aruppukottai Taluk',
+  'Bharathiyar Institute of Engineering for Women, Attur Taluk',
+  'Greentech College of Engineering for Women, Attur Taluk',
+  'Tagore Institute of Engineering and Technology, Attur Taluk',
+  'Maharaja Prithvi Engineering College, Avinashi',
+  'Maharaja Engineering College, Avinashi Taluk',
+  'J.P. College of Engineering, Ayikudy Tenkasi Taluk',
+  'Annai Vailankanni College of Engineering, Azhagapapuram (PO)',
+  'Govt. College of Engineering, Bargur',
+  'Asan Memorial College of Engineering and Technology, Chengalpattu',
+  'Anand Institute of Higher Technology, Chengalpattu Taluk',
+  'Indira Gandhi College of Engineering and Technology for Women, Chengalpattu Taluk',
+  'S.R.R. Engineering College, Chengalpattu Taluk',
+  'SRM University (S.R.M. Engineering College), Chengalpattu Taluk',
+  'Valliammai Engineering College, Chengalpattu Taluk',
+  'A.R.M. College of Engineering and Technology, Chengalpet',
+  'Prince Shri Venkateshwara Padmavathy Engineering College, Chengalpet Taluk',
+  'Mohamed Sathak A.J. College of Engineering, Chengelpet Taluk',
+  'S.M.K. Fomra Institute of Technology, Chengelput Taluk',
+  'A.C. College of Technology, Chennai',
+  'Aalim Muhammed Salegh College of Engineering, Chennai',
+  'Alpha College of Engineering, Chennai',
+  'B.S. Abdur Rahman University (B.S. Abdur Rahman Crescent Engineering College), Chennai',
+  'Bharath University (Bharath Institute of Higher Education and Research), Chennai',
+  'Central Institute of Plastic Engineering and Technology (CIPET), Chennai',
+  'Chennai College of Engineering and Technology, Chennai',
+  'Dhaanish Ahmed College of Engineering, Chennai',
+  'Dhanalakshmi College of Engineering, Chennai',
+  'Dr. MGR University (Dr. M.G.R. Educational and Research Insitute), Chennai',
+  'Easwari Engineering College, Chennai',
+  'G.K.M. College of Engineering and Technology, Chennai',
+  'Gojan School of Business and Technology, Chennai',
+  'Gopal Ramalingam Memorial Engineering College, Chennai',
+  'Hindustan University (Hindustan College of Engineering), Chennai',
+  'J.A. Institute of Engineering and Technology, Chennai',
+  'Jeppiaar Engineering College, Chennai',
+  'Jerusalem College of Engineering, Chennai',
+  'K.C.G. College of Technology, Chennai',
+  'Madha Engineering College, Chennai',
+  'Madras Institute of Technology, Chennai',
+  'Measi Academy of Architecture, Chennai',
+  'Meenakshi College of Engineering, Chennai',
+  'Meenakshi Sundararajan Engineering College, Chennai',
+  'Misrimal Navajee Munoth Jain Engineering College, Chennai',
+  'New Prince Shri Bhavani College of Engineering and Technology, Chennai',
+  'P.M.R. Engineering College, Chennai',
+  'P.M.R. Institute of Technology, Chennai',
+  'Panimalar Engineering College, Chennai',
+  'Panimalar Institute of Technology, Chennai',
+  'Raja Rajeswari Engineering College, Chennai',
+  'Sakthi Engineering College, Chennai',
+  'Sathyabama University (Sathyabama Engineering College), Chennai',
+  'Sree Sastha Institute of Engineering and Technology, Chennai',
+  'Sri Lakshmi Ammal Engineering College, Chennai',
+  'Sri Muthukumaran Institute of Technology, Chennai',
+  'Sri Ramanujar Engineering College, Chennai',
+  'Sri Sai Ram Institute of Technology, Chennai',
+  'Sri Sairam Engineering College, Chennai',
+  'Sri Sivasubramaniya Nadar College of Engineering, Chennai',
+  'Srinivasa Institute of Engineering and Technology, Chennai',
+  'St. Peter\'s University (St. Peters Engineering College), Chennai',
+  'T.J. Institute of Technology, Chennai',
+  'Tagore Engineering College, Chennai',
+  'Thangavelu Engineering College, Chennai',
+  'Vel Tech Dr.RR and Dr.SR Technical University (Vel Tech Engineering College), Chennai',
+  'Vel Tech High Tech Dr.Rangarajan Dr.Sakunthala Engineering College, Chennai',
+  'Vel Tech Multi Tech Dr.Rangarajan Dr.Sakunthala Engineering College, Chennai',
+  'Velammal Engineering College, Chennai',
+  'Vel\'s Srinivasa College of Engineering and Technology, Chennai',
+  'College of Engineering, Guindy, Chennai',
+  'Adhiparasakthi Engineering College, Cheyyar Taluk',
+  'Arulmigu Meenakshi Amman College of Engineering, Cheyyar Taluk',
+  'Annamalai University, Chidambaram',
+  'St. Xavier Catholic College of Engineering, Chunkankadai',
+  'Adithya Institute of Technology, Coimbatore',
+  'Agricultural Engineering College and Research Institute, Coimbatore',
+  'Amrita Vishwa Vidyapeetham University (Amrita School of Engineering), Coimbatore',
+  'Avinashilingam University for Women (Avinashilingam Institute for Home Science and Higher Education for Women), Coimbatore',
+  'Coimbatore Institute of Engineering and Information Technology, Coimbatore',
+  'Coimbatore Institute of Technology, Coimbatore',
+  'Dr. N.G.P. Institute of Technology, Coimbatore',
+  'EASA College of Engineering and Technology, Coimbatore',
+  'Govt. College of Technology, Coimbatore',
+  'Hindustan Institute of Technology, Coimbatore',
+  'Hindusthan College of Engineering and Technology, Coimbatore',
+  'Hindusthan Institute of Technology, Coimbatore',
+  'Indus College of Engineering, Coimbatore',
+  'Jawaharlal Institute of Technology, Coimbatore',
+  'K.G.I.S.L. Institute of Technology, Coimbatore',
+  'K.T.V.R. Knowledge Park for Engineering and Technology, Coimbatore',
+  'Kalaignar Karunanidhi Institute of Technology, Coimbatore',
+  'Karpagam College of Engineering, Coimbatore',
   'Karpagam Institute of Technology, Coimbatore',
-  'KTVR Knowledge Park for Engineering and Technology',
-  'Kumaraguru College of Technology',
-  'Maharaja Institute of Technology',
-  'Park College of Engineering and Technology',
-  'PPG Institute of Technology',
-  'PSG Institute of Technology and Applied Research',
-  'SNS College of Engineering',
-  'SNS College of Technology',
-  'Sri Krishna College of Engineering & Technology',
-  'Sri Eshwar College of Engineering',
-  'Sri Ramakrishna Institute of Technology',
-  'Sri Shakthi Institute of Engineering and Technology',
-  'Sri Ramakrishna Engineering College',
-  'Tamil Nadu College of Engineering',
-  'VSB College of Engineering and Technical Campus',
-  'PPG College of Arts and Science',
-  'ppg college of arts and science',
-  'KPR College of Arts, Science and Research',
-  'PSG College of Arts and Science',
-  'CBM College of Arts and Science',
-  'Dr.N.G.P.Arts and science college',
-  'Government Arts College',
-  'Hindusthan College of Arts and Science',
-  'KG College of Arts and Science',
-  'Nirmala College for Women',
-  'Sankara College of Science and Commerce',
-  'Shri Nehru Maha Vidyalaya College of Arts and Science',
-  'Sri Krishna Arts and Science College',
-  'Sri Ramakrishna College of Arts and Science for Women',
-  'Sri Ramakrishna Mission Vidyalaya College of Arts And Science',
-  'Sree Narayana Guru College',
-  'Rathinam College of Arts and Science'
+  'Karunya University (Karunya Institute of Technology), Coimbatore',
+  'Kathir College of Engineering, Coimbatore',
+  'Kumaraguru College of Technology, Coimbatore',
+  'Maharaja Institute of Technology, Coimbatore',
+  'Nehru Institute of Engineering and Technology, Coimbatore',
+  'Nyruthi Institute of Technology and Science, Coimbatore',
+  'P.P.G. Institute of Technology, Coimbatore',
+  'P.S.G. College of Technology, Coimbatore',
+  'Ranganathan Engineering College, Coimbatore',
+  'S.N.S. College of Engineering, Coimbatore',
+  'S.N.S. College of Technology, Coimbatore',
+  'S.S.K. College of Engineering and Technology, Coimbatore',
+  'Sri Krishna College of Engineering and Technology, Coimbatore',
+  'Sri Ramakrishna Institute of Technology, Coimbatore',
+  'Sri Shakthi Institute of Engineering and Technology, Coimbatore',
+  'Tamilnadu School of Architecture, Coimbatore',
+  'V.L.B. Janaki Ammal College of Engineering and Technology, Coimbatore',
+  'Sri Ramakrishna Engineering College, Coimbatore NorthTaluk',
+  'C.S.I. College of Engineering, Coonoor Taluk',
+  'Dr. Navalar Nedunchezhiyan College of Engineering, Cuddalore',
+  'Sri Jayaram Engineering College, Cuddalore',
+  'Krishnasamy College of Engineering and Technology, Cuddalore Taluk',
+  'Varuvan Vadivelan Institute of Technology, Dharmapuri',
+  'P.S.N.A. College of Engineering and Technology, Dindigul',
+  'R.V.S. College of Engineering and Technology, Dindugul',
+  'Vickram College of Engineering, Enathi',
+  'Sun College of Engineering and Technology, Erachakulam Post',
+  'C.M.S. College of Engineering, Ernapuram Post',
+  'Bannari Amman Institute of Technology, Erode',
+  'Erode Sengunthar Engineering College, Erode',
+  'Institute of Road and Transport Technology, Erode',
+  'Kongu Engineering College, Erode',
+  'Nandha Engineering College, Erode',
+  'Nandha Institute of Technology, Erode',
+  'Surya Engineering College, Erode',
+  'Velalar College of Engineering and Technology, Erode',
+  'Kings College of Engineering, Gandarvakottai Taluk',
+  'J.K.K. Muniraja Institute of Technology, Gobi Taluk',
+  'Shree Venkateshwara Hi-Tech Engineering College, Gobichettipalayam',
+  'R.M.D. Engineering College, Gummidipoondi Taluk',
+  'R.M.K. College of Engineering and Technology, Gummidipoondi Taluk',
+  'R.M.K. Engineering College, Gummidipoondi Taluk',
+  'Er. Perumal Manimekalai College of Engineering, Hosur',
+  'Adhiyamaan College of Engineering, Hosur Taluk',
+  'St. Michael College of Engineering and Technology, Kalayarkoil',
+  'Vins Christian College of Engineering, Kalkulam Taluk',
+  'Maha Bharathi Engineering College, Kallakurichi Taluk',
+  'Adhi College of Engineering and Technology, Kancheepuram',
+  'D.M.I. College of Engineering, Kancheepuram',
+  'JEI Mathaajee College of Engineering, Kancheepuram',
+  'Kanchi Pallavan Engineering College, Kancheepuram',
+  'P.T. Lee Chengalvaraya Naicker College of Engineering and Technology, Kancheepuram',
+  'SCSVMV University (Sri Chandrasekharendra Saraswathi Viswa Mahavidyalaya), Kancheepuram',
+  'Pallavan College of Engineering, Kancheepuram Taluk',
+  'Aarupadai Veedu Institute of Technology, Kanchipuram',
+  'St. Joseph\'s College of Engineering, Kanchipuram',
+  'Lord Venkateshwara Engineering College, Kanchipuram Taluk',
+  'C.S.I. Institute of Technology, Kanyakumari',
+  'James College of Engineering and Technology, Kanyakumari',
+  'K.N.S.K. College of Engineering, Kanyakumari',
+  'Narayanaguru College of Engineering, Kanyakumari',
+  'A.C. College of Engineering and Technology, Karaikudi',
+  'Central Electro Chemical Research Institute, Karaikudi',
+  'Sethu Institute of Technology, Kariapatti',
+  'Tejaa Shakthi Institute of Technology for Women, Karumathampatti',
+  'Tamil Nadu College of Engineering, Karumathampatti Post',
+  'Bethlahem Institute of Engineering, Karungal',
+  'Chettinad College of Engineering and Technology, Karur',
+  'M. Kumarasamy College of Engineering, Karur Taluk',
+  'Kingston Engineering College, Katpadi Taluk',
+  'Mohamed Sathak Engineering College, Kilakarai',
+  'Sri Eshwar College of Engineering, Kinathukadavu',
+  'Kodaikanal Institute of Technology, Kodaikanal',
+  'Sudharsan Engineering College, Kolathur Taluk',
+  'Excel College of Engineering for Women, Komarapalayam',
+  'Excel Engineering College, Komarapalayam',
+  'S.S.M. College of Engineering, Komarapalayam',
+  'Trichy Engineering College, Konalai',
+  'Info Institute of Engineering, Kovilpalayam',
+  'National Engineering College, Kovilpatti',
+  'P.S.V. College of Engineering and Technology, Krishnagiri',
+  'Thirumalai Engineering College, Krishnapuram Post',
+  'Mookambigai College of Engineering, Kulathur Taluk',
+  'Lord Jegannath College of Engineering and Technology, Kumarapuramthoppur Post',
+  'Arasu Engineering College, Kumbakonam',
+  'Shri Angala Amman College of Engineering and Technology, Lalgudi Taluk',
+  'K.L.N. College of Engineering, Madurai',
+  'K.L.N. College of Information Technology, Madurai',
+  'Latha Mathavan Engineering College, Madurai',
+  'P.T.R. College of Engineering and Technology, Madurai',
+  'Raja College of Engineering and Technology, Madurai',
+  'Thiagarajar College of Engineering, Madurai',
+  'Velammal College of Engineering and Technology, Madurai',
+  'Shri Andal Alagar College of Engineering, Madurantakam Taluk',
+  'A.C.T. College of Engineering and Technology, Maduranthagam',
+  'Karpaga Vinayaga College of Engineering and Technology, Maduranthagam Taluk',
+  'Dhanalakshmi Srinivasan College of Engineering and Technology, Mamallapuram',
+  'K. Ramakrishnan College of Engineering, Manachanallur Taluk',
+  'Kurinji College of Engineering and Technology, Manapparai',
+  'M.A.M. College of Engineering, Mannachanallur Taluk',
+  'A.R.J. College of Engineering and Technology, Mannargudi',
+  'Paventhar Bharathidasan College of Engineering and Technology, Mathur',
+  'A.V.C. College of Engineering, Mayiladutarai',
+  'The Kavery Engineering College, Mettur',
+  'Annai Mathammal Sheela Engineering College, Namakkal',
+  'Gnanamani College of Technology, Namakkal',
+  'P.G.P. College of Engineering and Technology, Namakkal',
+  'Selvam College of Technology, Namakkal',
+  'National College of Engineering, Nanguneri Taluk',
+  'N.P.R. College of Engineering and Technology, Natham',
+  'Immanuvel Arasar J.J. College of Engineering, Nattalam',
+  'Jeyaraj Annapackiam CSI College of Engineering, Nazareth',
+  'Christian College of Engineering and Technology, Oddanchatram',
+  'Narasu\'s Sarathy Institute of Technology, Omalur Taluk',
+  'Paavai College of Engineering, Pachal',
+  'Paavai Engineering College, Pachal',
+  'Sapthagiri College of Engineering, Palacode Taluk',
+  'Sri Subramaniya College of Engineering and Technology, Palani',
+  'Francis Xavier Engineering College, Palayamkottai',
+  'P.S.N. Engineering College, Palayamkottai',
+  'P.S.N. College of Engineering and Technology, Palayamkottai Taluk',
+  'Park College of Engineering Technology, Palladam Taluk',
+  'Ganapathy Chettiar College of Engineering and Technology, Paramakudi',
+  'Jayam College of Engineering and Technology, Pennagaram Taluk',
+  'Dhanalakshmi Srinivasan Engineering College, Perambalur',
+  'Rover Engineering College, Perambalur',
+  'Srinivasan Engineering College, Perambalur',
+  'Odaiyappa College of Engineering and Technology, Periyakulam Taluk',
+  'Maharaja Engineering College for Women, Perundurai',
+  'Sasurie College of Engineering, Perundurai',
+  'M.P.Nachimuthu M.Jaganathan Engineering College, Perundurai Taluk',
+  'Cauvery College of Engineering and Technology, Perur',
+  'Dr. Mahalingam College of Engineering and Technology, Pollachi',
+  'P.A. College of Engineering and Technology, Pollachi',
+  'Velammal Institute of Technology, Ponneri Taluk',
+  'M.A.R. College of Engineering and Technology, Pudukkottai',
+  'Cape Institute of Technology, Radhapuram Taluk',
+  'Syed Ammal Engineering College, Ramanathapuram',
+  'Muthayammal Engineering College, Rasipuram',
+  'A.V.S. Engineering College, Salem',
+  'Govt. College of Engineering, Salem',
+  'Sona College of Technology, Salem',
+  'Vinayaka Mission\'s Kirupanada Variyar Engineering College, Salem',
+  'Rabidhranath Tagore College of Engineering for Women, Sankari Taluk',
+  'M.A.M. College of Engineering and Technology, Siruganur',
+  'Seethai Ammal Engineering College, Sivagangai',
+  'Pandiyan Saraswathi Yadav Engineering College, Sivagangai Taluk',
+  'Mahakavi Bharathiyar College of Engineering and Technology, Sivagiri Taluk',
+  'S. Veerasamy Chettiar College of Engineering and Technology, Sivagiri Taluk',
+  'MEPCO Schlenk Engineering College, Sivakasi',
+  'P.S.R. Engineering College, Sivakasi',
+  'P.S.R. Rengasamy College of Engineering for Women, Sivakasi',
+  'Kalsar College of Engineering, Sriperambudur Taluk',
+  'Sakthi Mariamman Engineering College, Sriperumbudhur',
+  'Apollo Engineering College, Sriperumbudur',
+  'Kings Engineering College, Sriperumbudur',
+  'P.B. College of Engineering, Sriperumbudur',
+  'Rajiv Gandhi College of Engineering, Sriperumbudur',
+  'Rrase College of Engineering, Sriperumbudur',
+  'Sri Venkateswara College of Engineering, Sriperumbudur',
+  'V.K.K. Vijayan Engineering College, Sriperumbudur',
+  'Loyola Institute of Technology, Sriperumbudur Taluk',
+  'Rajalakshmi Engineering College, Sriperumbudur Taluk',
+  'Rajalakshmi Institute of Technology, Sriperumbudur Taluk',
+  'Saveetha Engineering College, Sriperumbudur Taluk',
+  'Maamallan Institute of Technology, Sriperumpudur',
+  'St. Joseph College of Engineering, Sriperumpudur',
+  'Arignar Anna Institute of Science and Technology, Sriperumpudur Taluk',
+  'Sri Krishna Engineering College, Sriperumpudur Taluk',
+  'J.J. College of Engineering and Technology, Srirangam',
+  'Saranathan College of Engineering, Srirangam Taluk',
+  'Kalasalingam Institute of Technology, Srivilliputhur',
+  'V.P.M.M. Engineering College for Women, Srivilliputtur Taluk',
+  'R.V.S. College of Engineering and Technology, Sulur',
+  'Parisutham Institute of Technology and Science, Thanjavur',
+  'PRIST University (P.R. Engineering College), Thanjavur',
+  'PRIST University (Ponnaiyah Ramajayam College of Engineering and Technology), Thanjavur',
+  'SASTRA University (Shanmugha Arts Science Technology and Research Academy), Thanjavur',
+  'St. Joseph\'s College of Engineering and Technology, Thanjavur',
+  'Bharath Niketan Engineering College, Theni',
+  'Theni Kammavar Sangam College of Technology, Theni',
+  'K.S. Rangasamy College of Technology, Thiruchengode Taluk',
+  'K.S.R. College of Engineering, Thiruchengode Taluk',
+  'The New Royal College of Engineering and Technology, Thirukkalukundram Taluk',
+  'Mount Zion College of Engineering, Thirumayam Taluk',
+  'Shanmuganathan Engineering College, Thirumayam Taluk',
+  'Balaji Institute of Engineering and Technology, Thiruporur',
+  'Sri Venkateswara Institute of Science and Technology, Thiruppachur Post',
+  'Lakshmi Chand Rajani College of Engineering and Technology, Thiruthani',
+  'Indira Institute of Engineering and Technology, Thiruvallur',
+  'S.K.R. Engineering College, Thiruvallur',
+  'Sri Venkateswara College of Engineering and Technology, Thiruvallur',
+  'Prathyusha Institute of Technology and Management, Thiruvallur Taluk',
+  'Anjalai Ammal Mahalingam Engineering College, Thiruvarur',
+  'S.A. Engineering College, Thiruverkadu Post',
+  'Dr. G.U. Pope College of Engineering, Thoothukudi',
+  'Jayalakshmi Institute of Technology, Thoppur',
+  'Loyola Institute of Technology and Science, Thovalai',
+  'Noorul Islam University (Noorul Islam College of Engineering), Thuckalay',
+  'Jayaram College of Engineering and Technology, Thuraiyur Taluk',
+  'University College of Engineering, Tindivanam',
+  'Mailam Engineering College, Tindivanam Taluk',
+  'J.K.K. Nataraja College of Engineering and Technology, Tiruchengode',
+  'Mahendra Engineering College for Women, Tiruchengode',
+  'Mahendra Institute of Technology, Tiruchengode',
+  'Sengunthar College of Engineering for Women, Tiruchengode',
+  'Sengunthar Engineering College, Tiruchengode',
+  'Vidhya Vikkas College of Engineering and Technology, Tiruchengode',
+  'Vivekanadha Institute of Engineering and Technology for Women, Tiruchengode',
+  'Vivekanadha College of Engineering for Women, Tiruchengode Talu',
+  'Mahendra Engineering College, Tiruchengode Taluk',
+  'Govt. College of Engineering, Tirunelveli',
+  'Joe Suresh Engineering College, Tirunelveli',
+  'Sardar Raja College of Engineering, Tirunelveli',
+  'Einstein College of Engineering, Tirunelveli Taluk',
+  'Sri Nandhanam College and Technology, Tirupattur',
+  'Bharathidasan Engineering College, Tirupattur Taluk',
+  'Angel College of Engineering and Technology, Tiruppur',
+  'Jaya Engineering College, Tiruvallur',
+  'Magna College of Engineering, Tiruvallur',
+  'Bhajarang Engineering College, Tiruvallur Taluk',
+  'Sri Ram Engineering College, Tiruvallur Taluk',
+  'Arunai Engineering College, Tiruvannamalai',
+  'S.K.P. Engineering College, Tiruvannamalai',
+  'Kamban Engineering College, Tiruvannamalai Taluk',
+  'Bharathidasan Institute of Engineering and Technology, Trichy',
+  'Indra Ganesan College of Engineering, Trichy',
+  'Kongunadu College of Engineering and Technology, Trichy',
+  'M.I.E.T. Engineering College, Trichy',
+  'National Institute of Technology, Trichy',
+  'Oxford Engineering College, Trichy',
+  'Anna University Tiruchirappali, Trichy',
+  'Dr. Sivanthi Aditanar College of Engineering, Tuticorin',
+  'Infant Jesus College of Engineering, Tuticorin',
+  'Infant Jesus College of Engineering and Technology, Tuticorin',
+  'Annai Teresa College of Engineering, Ulundurpet Taluk',
+  'V.R.S. College of Engineering and Technology, Ulundurpet Taluk',
+  'SAMS College of Engineering and Technology, Uthokottai Taluk',
+  'J.N.N. Institute of Engineering, Uthukottai Taluk',
+  'The Rajaas Engineering College, Vadakkangulam',
+  'Maha College of Engineering, Valapadi Taluk',
+  'Sri Padmavathy College of Engineering, Valarpuram post',
+  'Periyar Maniammai University (Periyar Maniammai College of Technology for Women), Vallam',
+  'PET Engineering College, Vallioor',
+  'Thiruvalluvar College of Engineering and Technology, Vandavasi',
+  'Priyadarshini Engineering College, Vaniyambadi',
+  'Dr. Paul\'s Engineering College, Vanur Taluk',
+  'Sri Aravindar Engineering College, Vanur Taluk',
+  'Marthandam College of Engineering and Technology, Veeyanoor',
+  'Adhiparasakthi College of Engineering, Vellore',
+  'C. Abdul Hakeem College of Engineering and Technology, Vellore',
+  'G.G.R. College of Engineering, Vellore',
+  'Ganadipathy Tulsi\'s Engineering College, Vellore',
+  'Thanthai Periyar Govt. Institute of Technology, Vellore',
+  'VIT University (Vellore Institute of Technology), Vellore',
+  'Surya College of Engineering and Technology, Vikravandi',
+  'A.R. Engineering College, Villupuram',
+  'E.S. College of Engineering and Technology, Villupuram',
+  'I.F.E.T. College of Engineering, Villupuram',
+  'Idhaya Engineering College for Women, Villupuram',
+  'University College of Engineering, Villupuram',
+  'Kalasalingam University (Arulmigu Kalasalingam College of Engineering), Virudhunagar',
+  'Kamaraj College of Engineering and Technology, Virudhunagar',
+  'Sri Vidya College of Engineering and Technology, Virudhunagar',
+  'Saraswathi Velu College of Engineering, Walajah Taluk',
+  'Ranipet Engineering College, Wallajah Taluk'
+];
+
+// List of Indian states
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Delhi',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry'
 ];
 
 function StudentDashboard() {
@@ -91,6 +447,28 @@ function StudentDashboard() {
   });
   const [permissionImage, setPermissionImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [collegeSearch, setCollegeSearch] = useState('');
+  const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
+  const collegeDropdownRef = useRef(null);
+
+  // Filter colleges based on search
+  const filteredColleges = collegeSearch
+    ? TAMILNADU_COLLEGES.filter(college =>
+        college.toLowerCase().includes(collegeSearch.toLowerCase())
+      )
+    : TAMILNADU_COLLEGES;
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (collegeDropdownRef.current && !collegeDropdownRef.current.contains(event.target)) {
+        setShowCollegeDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchODRequests();
@@ -164,15 +542,18 @@ function StudentDashboard() {
       if (name === 'od_type' && value === 'intra_college') {
         updated.host_institution = 'KGISL Institute of Technology';
         updated.location_type = ''; // Clear location type for intra-college
-      } else if (name === 'od_type' && value === 'inter_college_coimbatore') {
-        // Clear host institution and auto-set location type for Coimbatore
+        setCollegeSearch(''); // Clear college search
+      } else if (name === 'od_type' && value === 'inter_college_within_tn') {
+        // Clear host institution for within TN
         updated.host_institution = '';
-        updated.location_type = 'within_state'; // Auto-select within state for Coimbatore
-      } else if (name === 'od_type' && value === 'inter_college_others') {
-        // Clear host institution when switching to inter-college others
+        updated.location_type = 'Tamil Nadu'; // Auto-set to Tamil Nadu
+        setCollegeSearch(''); // Clear college search to show dropdown
+      } else if (name === 'od_type' && value === 'inter_college_outside_tn') {
+        // Clear host institution when switching to outside TN
         updated.host_institution = '';
-        updated.location_type = ''; // Let user choose for others
-      } else if (name === 'od_type' && value !== 'inter_college_coimbatore' && value !== 'inter_college_others') {
+        updated.location_type = ''; // Let user choose state
+        setCollegeSearch(''); // Clear college search
+      } else if (name === 'od_type' && value !== 'inter_college_within_tn' && value !== 'inter_college_outside_tn') {
         // Clear location type if switching away from inter-college
         updated.location_type = '';
       }
@@ -185,9 +566,9 @@ function StudentDashboard() {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      const allowedTypes = ['application/pdf'];
       if (!allowedTypes.includes(file.type)) {
-        alert('Please upload only image files (JPEG, JPG, PNG, GIF)');
+        alert('Please upload only PDF files');
         e.target.value = '';
         return;
       }
@@ -209,6 +590,20 @@ function StudentDashboard() {
     setSubmitting(true);
 
     try {
+      // Validate that OD is applied at least 3 days before the event start date
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      const eventStartDate = new Date(newRequest.from_date);
+      eventStartDate.setHours(0, 0, 0, 0);
+      
+      const daysDifference = Math.floor((eventStartDate - today) / (1000 * 60 * 60 * 24));
+      
+      if (daysDifference < 3) {
+        toast.error('OD requests must be submitted at least 3 days before the event start date');
+        setSubmitting(false);
+        return;
+      }
+
       // Create FormData for file upload
       const formData = new FormData();
       
@@ -221,7 +616,7 @@ function StudentDashboard() {
       if (permissionImage) {
         formData.append('application_file', permissionImage);
       } else {
-        throw new Error('Permission document is required');
+        throw new Error('OD Permission Letter is required');
       }
 
       await api.post('/od-requests', formData, {
@@ -243,6 +638,8 @@ function StudentDashboard() {
         location_type: ''
       });
       setPermissionImage(null);
+      setCollegeSearch(''); // Clear college search
+      setShowCollegeDropdown(false); // Close dropdown
       fetchODRequests();
       fetchPendingProofs();
     } catch (error) {
@@ -387,16 +784,16 @@ function StudentDashboard() {
                   className="input-field mt-1"
                 >
                   <option value="">Select OD Type</option>
-                  <option value="intra_college">Intra-college</option>
-                  <option value="inter_college_coimbatore">Inter-college-Coimbatore</option>
-                  <option value="inter_college_others">Inter-college-Others</option>
+                  <option value="intra_college">Intra-College</option>
+                  <option value="inter_college_within_tn">Inter College-Within Tamilnadu</option>
+                  <option value="inter_college_outside_tn">Inter College-Outside Tamilnadu</option>
                 </select>
               </div>
 
-              {(newRequest.od_type === 'inter_college_coimbatore' || newRequest.od_type === 'inter_college_others') && (
+              {newRequest.od_type === 'inter_college_outside_tn' && (
                 <div>
                   <label htmlFor="location_type" className="block text-sm font-medium text-secondary-700">
-                    Location Type *
+                    State *
                   </label>
                   <select
                     id="location_type"
@@ -404,18 +801,15 @@ function StudentDashboard() {
                     required
                     value={newRequest.location_type}
                     onChange={handleInputChange}
-                    disabled={newRequest.od_type === 'inter_college_coimbatore'}
-                    className={`input-field mt-1 ${newRequest.od_type === 'inter_college_coimbatore' ? 'bg-secondary-100 cursor-not-allowed' : ''}`}
+                    className="input-field mt-1"
                   >
-                    <option value="">Select Location Type</option>
-                    <option value="within_state">Within State</option>
-                    <option value="out_of_state">Out of State</option>
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map((state, index) => (
+                      <option key={index} value={state}>
+                        {state}
+                      </option>
+                    ))}
                   </select>
-                  {newRequest.od_type === 'inter_college_coimbatore' && (
-                    <p className="mt-1 text-xs text-secondary-500">
-                      Automatically set to "Within State" for Coimbatore institutions
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -423,22 +817,48 @@ function StudentDashboard() {
                 <label htmlFor="host_institution" className="block text-sm font-medium text-secondary-700">
                   Host Institution *
                 </label>
-                {newRequest.od_type === 'inter_college_coimbatore' ? (
-                  <select
-                    id="host_institution"
-                    name="host_institution"
-                    required
-                    value={newRequest.host_institution}
-                    onChange={handleInputChange}
-                    className="input-field mt-1"
-                  >
-                    <option value="">Select Institution</option>
-                    {COIMBATORE_INSTITUTIONS.map((institution, index) => (
-                      <option key={index} value={institution}>
-                        {institution}
-                      </option>
-                    ))}
-                  </select>
+                {newRequest.od_type === 'inter_college_within_tn' ? (
+                  <div className="relative" ref={collegeDropdownRef}>
+                    <input
+                      type="text"
+                      id="host_institution"
+                      name="host_institution"
+                      required
+                      value={collegeSearch || newRequest.host_institution}
+                      onChange={(e) => {
+                        setCollegeSearch(e.target.value);
+                        setShowCollegeDropdown(true);
+                        setNewRequest({ ...newRequest, host_institution: e.target.value });
+                      }}
+                      onFocus={() => setShowCollegeDropdown(true)}
+                      className="input-field mt-1"
+                      placeholder="Search or select college..."
+                      autoComplete="off"
+                    />
+                    {showCollegeDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-secondary-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {filteredColleges.length > 0 ? (
+                          filteredColleges.map((college, index) => (
+                            <div
+                              key={index}
+                              className="px-4 py-2 hover:bg-primary-50 cursor-pointer text-sm"
+                              onClick={() => {
+                                setNewRequest({ ...newRequest, host_institution: college });
+                                setCollegeSearch(college);
+                                setShowCollegeDropdown(false);
+                              }}
+                            >
+                              {college}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-secondary-500">
+                            No colleges found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <input
                     type="text"
@@ -502,13 +922,13 @@ function StudentDashboard() {
 
             <div>
               <label htmlFor="permission_image" className="block text-sm font-medium text-secondary-700">
-                Permission Document *
+                OD Permission Letter *
               </label>
               <input
                 type="file"
                 id="permission_image"
                 name="permission_image"
-                accept="image/jpeg,image/jpg,image/png,image/gif"
+                accept="application/pdf"
                 onChange={handleFileChange}
                 required
                 className="mt-1 block w-full text-sm text-secondary-500
@@ -519,7 +939,7 @@ function StudentDashboard() {
                 hover:file:bg-primary-100"
               />
               <p className="mt-1 text-xs text-secondary-500">
-                Upload permission document in image format (JPEG, PNG, GIF). Max size: 5MB
+                Upload permission Letter in PDF format
               </p>
               {permissionImage && (
                 <p className="mt-2 text-sm text-primary-600">
