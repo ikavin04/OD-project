@@ -283,11 +283,34 @@ const FacultyReports = () => {
     try {
       // Prepare data for Excel
       const excelData = filteredRequests.map((request, index) => ({
+        'S.No': index + 1,
+        'Student Name': request.student?.name || 'N/A',
         'Roll Number': request.student?.roll_number || 'N/A',
-        'Department': request.student?.department || 'N/A',
         'Year': request.student?.year || 'N/A',
+        'Section': request.student?.section || 'N/A',
+        'Department': request.student?.department || 'N/A',
+        'Event Name': request.event_name || 'N/A',
+        'Event Description': request.event_description || 'N/A',
+        'Institution': request.host_institution || 'N/A',
+        'Venue': request.venue || 'N/A',
+        'OD Type': request.od_type === 'intra_college' ? 'Intra-College' : 
+                   request.od_type === 'inter_college_within_tn' ? 'Inter College-Within TN' :
+                   request.od_type === 'inter_college_outside_tn' ? 'Inter College-Outside TN' : 'N/A',
+        'From Date': request.from_date ? format(new Date(request.from_date), 'dd-MMM-yyyy') : 'N/A',
+        'To Date': request.to_date ? format(new Date(request.to_date), 'dd-MMM-yyyy') : 'N/A',
+        'OD Status': request.status === 'approved' ? 'Approved' : 
+                     request.status === 'rejected' ? 'Rejected' : 'Pending',
+        'Proof Submission Status': request.attendance_proof && request.certificate ? 'Complete' :
+                                   request.attendance_proof ? 'Attendance Only' : 'Pending',
         'Attendance Proof Submitted': request.attendance_proof_file_data || request.attendance_proof?.filename ? 'Yes' : 'No',
-        'Certificate Uploaded Status': request.certificate_file_data || request.certificate?.filename ? 'Yes' : 'No'
+        'Attendance Submitted Date': request.attendance_proof?.uploaded_at ? 
+                                     format(new Date(request.attendance_proof.uploaded_at), 'dd-MMM-yyyy') : 'N/A',
+        'Certificate Submitted': request.certificate_file_data || request.certificate?.filename ? 'Yes' : 'No',
+        'Certificate Submitted Date': request.certificate?.uploaded_at ? 
+                                      format(new Date(request.certificate.uploaded_at), 'dd-MMM-yyyy') : 'N/A',
+        'Approval Comments': request.faculty_comments || 'N/A',
+        'Approved Date': request.approved_date ? format(new Date(request.approved_date), 'dd-MMM-yyyy') : 'N/A',
+        'Request Created Date': request.created_at ? format(new Date(request.created_at), 'dd-MMM-yyyy') : 'N/A'
       }));
 
       // Create worksheet
@@ -295,11 +318,28 @@ const FacultyReports = () => {
 
       // Set column widths
       const columnWidths = [
+        { wch: 6 },  // S.No
+        { wch: 20 }, // Student Name
         { wch: 15 }, // Roll Number
+        { wch: 6 },  // Year
+        { wch: 8 },  // Section
         { wch: 25 }, // Department
-        { wch: 8 },  // Year
+        { wch: 30 }, // Event Name
+        { wch: 40 }, // Event Description
+        { wch: 35 }, // Institution
+        { wch: 25 }, // Venue
+        { wch: 25 }, // OD Type
+        { wch: 15 }, // From Date
+        { wch: 15 }, // To Date
+        { wch: 12 }, // OD Status
+        { wch: 22 }, // Proof Submission Status
         { wch: 25 }, // Attendance Proof Submitted
-        { wch: 25 }  // Certificate Uploaded Status
+        { wch: 22 }, // Attendance Submitted Date
+        { wch: 22 }, // Certificate Submitted
+        { wch: 25 }, // Certificate Submitted Date
+        { wch: 30 }, // Approval Comments
+        { wch: 18 }, // Approved Date
+        { wch: 20 }  // Request Created Date
       ];
       worksheet['!cols'] = columnWidths;
 

@@ -122,7 +122,7 @@ const LoginForm = () => {
             />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-secondary-900">
-            Students on-duty management system
+            Students On-Duty Management System
           </h2>
           <p className="mt-2 text-sm font-semibold text-primary-600">
             KGiSL Institute of Technology

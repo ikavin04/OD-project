@@ -34,7 +34,7 @@ const Header = () => {
                 <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <span className="ml-2 text-base sm:text-lg md:text-xl font-bold text-secondary-900 truncate">
-                OD Management
+                Students On-Duty Management System
               </span>
             </Link>
             

@@ -450,6 +450,25 @@ function StudentDashboard() {
   const [collegeSearch, setCollegeSearch] = useState('');
   const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
   const collegeDropdownRef = useRef(null);
+  const [showOdTypeDropdown, setShowOdTypeDropdown] = useState(false);
+  const odTypeDropdownRef = useRef(null);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const stateDropdownRef = useRef(null);
+  const [stateSearch, setStateSearch] = useState('');
+
+  // OD Type options
+  const OD_TYPE_OPTIONS = [
+    { value: 'intra_college', label: 'Intra-College' },
+    { value: 'inter_college_within_tn', label: 'Inter College-Within Tamilnadu' },
+    { value: 'inter_college_outside_tn', label: 'Inter College-Outside Tamilnadu' }
+  ];
+
+  // Filter states based on search
+  const filteredStates = stateSearch
+    ? INDIAN_STATES.filter(state =>
+        state.toLowerCase().includes(stateSearch.toLowerCase())
+      )
+    : INDIAN_STATES;
 
   // Filter colleges based on search
   const filteredColleges = collegeSearch
@@ -458,11 +477,17 @@ function StudentDashboard() {
       )
     : TAMILNADU_COLLEGES;
 
-  // Handle click outside to close dropdown
+  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (collegeDropdownRef.current && !collegeDropdownRef.current.contains(event.target)) {
         setShowCollegeDropdown(false);
+      }
+      if (odTypeDropdownRef.current && !odTypeDropdownRef.current.contains(event.target)) {
+        setShowOdTypeDropdown(false);
+      }
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(event.target)) {
+        setShowStateDropdown(false);
       }
     };
 
@@ -543,16 +568,19 @@ function StudentDashboard() {
         updated.host_institution = 'KGISL Institute of Technology';
         updated.location_type = ''; // Clear location type for intra-college
         setCollegeSearch(''); // Clear college search
+        setStateSearch(''); // Clear state search
       } else if (name === 'od_type' && value === 'inter_college_within_tn') {
         // Clear host institution for within TN
         updated.host_institution = '';
         updated.location_type = 'Tamil Nadu'; // Auto-set to Tamil Nadu
         setCollegeSearch(''); // Clear college search to show dropdown
+        setStateSearch(''); // Clear state search
       } else if (name === 'od_type' && value === 'inter_college_outside_tn') {
         // Clear host institution when switching to outside TN
         updated.host_institution = '';
         updated.location_type = ''; // Let user choose state
         setCollegeSearch(''); // Clear college search
+        setStateSearch(''); // Clear state search
       } else if (name === 'od_type' && value !== 'inter_college_within_tn' && value !== 'inter_college_outside_tn') {
         // Clear location type if switching away from inter-college
         updated.location_type = '';
@@ -640,6 +668,9 @@ function StudentDashboard() {
       setPermissionImage(null);
       setCollegeSearch(''); // Clear college search
       setShowCollegeDropdown(false); // Close dropdown
+      setStateSearch(''); // Clear state search
+      setShowStateDropdown(false); // Close state dropdown
+      setShowOdTypeDropdown(false); // Close OD type dropdown
       fetchODRequests();
       fetchPendingProofs();
     } catch (error) {
@@ -680,30 +711,30 @@ function StudentDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-secondary-900">Student Dashboard</h1>
-          <p className="text-secondary-600 mt-1">Welcome, {user?.name}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-secondary-900">Student Dashboard</h1>
+          <p className="text-sm sm:text-base text-secondary-600 mt-1">Welcome, {user?.name}</p>
         </div>
         <button
           onClick={() => setShowNewRequestForm(!showNewRequestForm)}
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
         >
-          <Plus className="h-5 w-5" />
-          <span>New OD Request</span>
+          <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="text-sm sm:text-base">New OD Request</span>
         </button>
       </div>
 
       {/* Overdue Proof Notifications */}
       {pendingProofs.length > 0 && (
         <div className="card bg-secondary-100 border-secondary-300">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="h-6 w-6 text-secondary-700 mt-1" />
+          <div className="flex flex-col sm:flex-row items-start gap-3">
+            <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-700 mt-1 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-secondary-900 mb-2">Urgent: Overdue Proof Submissions</h3>
-              <p className="text-sm text-secondary-800 mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-secondary-900 mb-2">Urgent: Overdue Proof Submissions</h3>
+              <p className="text-xs sm:text-sm text-secondary-800 mb-3">
                 You have {pendingProofs.length} OD request{pendingProofs.length > 1 ? 's' : ''} with overdue proof submissions. 
                 You cannot apply for new OD requests until these are completed.
               </p>
@@ -751,10 +782,10 @@ function StudentDashboard() {
       {/* New Request Form */}
       {showNewRequestForm && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-secondary-900 mb-6">Submit New OD Request</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-secondary-900 mb-4 sm:mb-6">Submit New OD Request</h2>
           
-          <form onSubmit={handleSubmitRequest} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmitRequest} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label htmlFor="event_name" className="block text-sm font-medium text-secondary-700">
                   Event Name *
@@ -775,19 +806,39 @@ function StudentDashboard() {
                 <label htmlFor="od_type" className="block text-sm font-medium text-secondary-700">
                   OD Type *
                 </label>
-                <select
-                  id="od_type"
-                  name="od_type"
-                  required
-                  value={newRequest.od_type}
-                  onChange={handleInputChange}
-                  className="input-field mt-1"
-                >
-                  <option value="">Select OD Type</option>
-                  <option value="intra_college">Intra-College</option>
-                  <option value="inter_college_within_tn">Inter College-Within Tamilnadu</option>
-                  <option value="inter_college_outside_tn">Inter College-Outside Tamilnadu</option>
-                </select>
+                <div className="relative" ref={odTypeDropdownRef}>
+                  <input
+                    type="text"
+                    id="od_type"
+                    name="od_type"
+                    required
+                    value={OD_TYPE_OPTIONS.find(opt => opt.value === newRequest.od_type)?.label || ''}
+                    onFocus={() => setShowOdTypeDropdown(true)}
+                    readOnly
+                    className="input-field mt-1 cursor-pointer"
+                    placeholder="Select OD Type"
+                    autoComplete="off"
+                  />
+                  {showOdTypeDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-secondary-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {OD_TYPE_OPTIONS.map((option, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-primary-50 cursor-pointer text-sm"
+                          onClick={() => {
+                            setNewRequest({ ...newRequest, od_type: option.value });
+                            setShowOdTypeDropdown(false);
+                            // Trigger the same logic as handleInputChange
+                            const event = { target: { name: 'od_type', value: option.value } };
+                            handleInputChange(event);
+                          }}
+                        >
+                          {option.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {newRequest.od_type === 'inter_college_outside_tn' && (
@@ -795,21 +846,47 @@ function StudentDashboard() {
                   <label htmlFor="location_type" className="block text-sm font-medium text-secondary-700">
                     State *
                   </label>
-                  <select
-                    id="location_type"
-                    name="location_type"
-                    required
-                    value={newRequest.location_type}
-                    onChange={handleInputChange}
-                    className="input-field mt-1"
-                  >
-                    <option value="">Select State</option>
-                    {INDIAN_STATES.map((state, index) => (
-                      <option key={index} value={state}>
-                        {state}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={stateDropdownRef}>
+                    <input
+                      type="text"
+                      id="location_type"
+                      name="location_type"
+                      required
+                      value={stateSearch || newRequest.location_type}
+                      onChange={(e) => {
+                        setStateSearch(e.target.value);
+                        setShowStateDropdown(true);
+                        setNewRequest({ ...newRequest, location_type: e.target.value });
+                      }}
+                      onFocus={() => setShowStateDropdown(true)}
+                      className="input-field mt-1"
+                      placeholder="Search or select state..."
+                      autoComplete="off"
+                    />
+                    {showStateDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-secondary-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {filteredStates.length > 0 ? (
+                          filteredStates.map((state, index) => (
+                            <div
+                              key={index}
+                              className="px-4 py-2 hover:bg-primary-50 cursor-pointer text-sm"
+                              onClick={() => {
+                                setNewRequest({ ...newRequest, location_type: state });
+                                setStateSearch(state);
+                                setShowStateDropdown(false);
+                              }}
+                            >
+                              {state}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-secondary-500">
+                            No states found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -906,7 +983,7 @@ function StudentDashboard() {
             </div>
 
             <div>
-              <label htmlFor="event_description" className="block text-sm font-medium text-secondary-700">
+              <label htmlFor="event_description" className="block text-xs sm:text-sm font-medium text-secondary-700">
                 Event Description
               </label>
               <textarea
@@ -915,13 +992,13 @@ function StudentDashboard() {
                 rows="3"
                 value={newRequest.event_description}
                 onChange={handleInputChange}
-                className="input-field mt-1"
+                className="input-field mt-1 text-sm sm:text-base"
                 placeholder="Additional details about the event..."
               />
             </div>
 
             <div>
-              <label htmlFor="permission_image" className="block text-sm font-medium text-secondary-700">
+              <label htmlFor="permission_image" className="block text-xs sm:text-sm font-medium text-secondary-700">
                 OD Permission Letter *
               </label>
               <input
@@ -931,10 +1008,10 @@ function StudentDashboard() {
                 accept="application/pdf"
                 onChange={handleFileChange}
                 required
-                className="mt-1 block w-full text-sm text-secondary-500
-                file:mr-4 file:py-2 file:px-4
+                className="mt-1 block w-full text-xs sm:text-sm text-secondary-500
+                file:mr-3 sm:file:mr-4 file:py-2 file:px-3 sm:file:px-4
                 file:rounded-md file:border-0
-                file:text-sm file:font-medium
+                file:text-xs sm:file:text-sm file:font-medium
                 file:bg-primary-50 file:text-primary-700
                 hover:file:bg-primary-100"
               />
@@ -948,18 +1025,18 @@ function StudentDashboard() {
               )}
             </div>
 
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4">
               <button
                 type="submit"
                 disabled={submitting}
-                className="btn-primary disabled:opacity-50"
+                className="btn-primary disabled:opacity-50 w-full sm:w-auto order-1 sm:order-none"
               >
                 {submitting ? 'Submitting...' : 'Submit Request'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowNewRequestForm(false)}
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto order-2 sm:order-none"
               >
                 Cancel
               </button>
@@ -981,29 +1058,31 @@ function StudentDashboard() {
         ) : (
           <div className="space-y-4">
             {odRequests.map((request) => (
-              <div key={request.id} className="border border-secondary-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-4">
+              <div key={request.id} className="border border-secondary-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
                   <div className="flex items-center space-x-3">
                     <div className={`flex items-center space-x-2 ${getStatusColor(request.status)}`}>
                       {getStatusIcon(request.status)}
-                      <span className="font-medium capitalize">{request.status}</span>
+                      <span className="text-sm sm:text-base font-medium capitalize">{request.status}</span>
                     </div>
                   </div>
-                  <span className="text-sm text-secondary-500">#{request.id}</span>
+                  <span className="text-xs sm:text-sm text-secondary-500">#{request.id}</span>
                 </div>
 
-                <h3 className="text-lg font-semibold text-secondary-900 mb-2">{request.event_name}</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-secondary-900 mb-2">{request.event_name}</h3>
                 
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-secondary-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span className="text-sm">
+                  <div className="flex items-start sm:items-center text-secondary-600">
+                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5 sm:mt-0" />
+                    <span className="text-xs sm:text-sm break-words">
                       {format(new Date(request.from_date), 'MMM dd, yyyy')} - {format(new Date(request.to_date), 'MMM dd, yyyy')}
                     </span>
                   </div>
-                  <div className="flex items-center text-secondary-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span className="text-sm">{request.host_institution || request.venue || 'N/A'}</span>
+                  <div className="flex items-start sm:items-center text-secondary-600 flex-wrap gap-1">
+                    <div className="flex items-center flex-shrink-0">
+                      <MapPin className="h-4 w-4 mr-2" />
+                    </div>
+                    <span className="text-xs sm:text-sm break-words flex-1">{request.host_institution || request.venue || 'N/A'}</span>
                     {(request.od_type === 'inter_college_coimbatore' || request.od_type === 'inter_college_others') && request.location_type && (
                       <span className="ml-2 px-2 py-1 text-xs bg-secondary-100 text-secondary-600 rounded-full">
                         {request.location_type === 'within_state' ? 'Within State' : 'Out of State'}
