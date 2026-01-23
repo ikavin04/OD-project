@@ -227,7 +227,8 @@ const FacultyDashboard = () => {
       
       if (response.data.od_requests?.length > 0) {
         console.log('[ACTION] First request details:', response.data.od_requests[0]);
-        toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`);
+        // Use a fixed toast id to avoid duplicate toasts (React StrictMode may call effects twice)
+        toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`, { id: 'od-requests-loaded' });
       } else {
         console.log('[INFO] No OD requests found');
         // toast.info is not available in react-hot-toast, using console log instead
@@ -882,7 +883,7 @@ const FacultyDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
         {/* Header */}
         <div className="mb-4 sm:mb-6">

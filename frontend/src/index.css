@@ -2,22 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-navy: #2F4156;
+  --color-teal: #567C8D;
+  --color-beige: #F5EFE8;
+  --color-sky: #C8D9E6;
+  --color-white: #FFFFFF;
+  --text-color: var(--color-navy);
+  --bg-color: var(--color-beige);
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--color-sky);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #9CA3AF;
+  background: var(--color-navy);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--color-teal);
 }
 
 /* Custom components */
@@ -39,7 +54,8 @@
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-secondary-200 p-6;
+    background: var(--color-white);
+    @apply rounded-lg shadow-sm border border-secondary-200 p-6;
   }
   
   .status-badge {
