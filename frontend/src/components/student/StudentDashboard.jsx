@@ -458,9 +458,10 @@ function StudentDashboard() {
 
   // OD Type options
   const OD_TYPE_OPTIONS = [
-    { value: 'intra_college', label: 'Intra-College' },
-    { value: 'inter_college_within_tn', label: 'Inter College-Within Tamilnadu' },
-    { value: 'inter_college_outside_tn', label: 'Inter College-Outside Tamilnadu' }
+    { value: 'INTRA_COLLEGE', label: 'Intra-College' },
+    { value: 'INTER_COLLEGE_WITHIN_TN', label: 'Inter College-Within Tamilnadu' },
+    { value: 'INTER_COLLEGE_COIMBATORE', label: 'Inter College-Coimbatore' },
+    { value: 'INTER_COLLEGE_OTHERS', label: 'Inter College-Others' }
   ];
 
   // Filter states based on search
@@ -569,20 +570,26 @@ function StudentDashboard() {
         updated.location_type = ''; // Clear location type for intra-college
         setCollegeSearch(''); // Clear college search
         setStateSearch(''); // Clear state search
-      } else if (name === 'od_type' && value === 'inter_college_within_tn') {
+      } else if (name === 'od_type' && value === 'INTER_COLLEGE_WITHIN_TN') {
         // Clear host institution for within TN
         updated.host_institution = '';
         updated.location_type = 'Tamil Nadu'; // Auto-set to Tamil Nadu
         setCollegeSearch(''); // Clear college search to show dropdown
         setStateSearch(''); // Clear state search
-      } else if (name === 'od_type' && value === 'inter_college_outside_tn') {
-        // Clear host institution when switching to outside TN
+      } else if (name === 'od_type' && value === 'INTER_COLLEGE_COIMBATORE') {
+        // Clear host institution when switching to Coimbatore
+        updated.host_institution = '';
+        updated.location_type = 'Coimbatore'; // Set to Coimbatore
+        setCollegeSearch(''); // Clear college search
+        setStateSearch(''); // Clear state search
+      } else if (name === 'od_type' && value === 'INTER_COLLEGE_OTHERS') {
+        // Clear host institution when switching to others
         updated.host_institution = '';
         updated.location_type = ''; // Let user choose state
         setCollegeSearch(''); // Clear college search
         setStateSearch(''); // Clear state search
-      } else if (name === 'od_type' && value !== 'inter_college_within_tn' && value !== 'inter_college_outside_tn') {
-        // Clear location type if switching away from inter-college
+      } else if (name === 'od_type' && value === 'INTRA_COLLEGE') {
+        // Clear location type if switching to intra-college
         updated.location_type = '';
       }
       
@@ -894,7 +901,7 @@ function StudentDashboard() {
                 <label htmlFor="host_institution" className="block text-sm font-medium text-secondary-700">
                   Host Institution *
                 </label>
-                {newRequest.od_type === 'inter_college_within_tn' ? (
+                {newRequest.od_type === 'INTER_COLLEGE_WITHIN_TN' ? (
                   <div className="relative" ref={collegeDropdownRef}>
                     <input
                       type="text"

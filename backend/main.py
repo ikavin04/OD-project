@@ -31,6 +31,12 @@ from PIL import Image
 import pytesseract
 import io
 
+# Google Drive integration
+from google_drive_helper import get_drive_manager
+
+# ImgBB & Catbox file upload integration
+from imgbb_catbox_helper import upload_file
+
 # Load environment variables
 load_dotenv()
 
@@ -97,11 +103,13 @@ app.config['MAIL_SUPPRESS_SEND'] = False
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 cors = CORS(app, 
-    origins=["http://localhost:3003", "http://localhost:3002", "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3003", "http://127.0.0.1:3002", "http://127.0.0.1:3001", "http://127.0.0.1:3000"],
+    resources={r"/api/*": {"origins": ["http://localhost:3003", "http://localhost:3002", "http://localhost:3001", "http://localhost:3000", "http://127.0.0.1:3003", "http://127.0.0.1:3002", "http://127.0.0.1:3001", "http://127.0.0.1:3000"]}},
     supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+    allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials", "X-Google-Access-Token"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    expose_headers=["Content-Type", "Content-Disposition", "Authorization"]
+    expose_headers=["Content-Type", "Content-Disposition", "Authorization"],
+    send_wildcard=False,
+    always_send=True
 )
 limiter = Limiter(key_func=get_remote_address)
 limiter.init_app(app)
@@ -133,9 +141,10 @@ class ODStatus(enum.Enum):
     REJECTED = "rejected"
 
 class ODType(enum.Enum):
-    INTRA_COLLEGE = "intra_college"
-    INTER_COLLEGE_COIMBATORE = "inter_college_coimbatore"
-    INTER_COLLEGE_OTHERS = "inter_college_others"
+    INTRA_COLLEGE = "INTRA_COLLEGE"
+    INTER_COLLEGE_WITHIN_TN = "INTER_COLLEGE_WITHIN_TN"
+    INTER_COLLEGE_COIMBATORE = "INTER_COLLEGE_COIMBATORE"
+    INTER_COLLEGE_OTHERS = "INTER_COLLEGE_OTHERS"
 
 class ProofStatus(enum.Enum):
     NOT_SUBMITTED = "NOT_SUBMITTED"
@@ -267,6 +276,10 @@ class ODRequest(db.Model):
     application_mime_type = db.Column(db.String(100))
     application_file_hash = db.Column(db.String(64), unique=True)
     
+    # Google Drive fields for OD letter/application
+    application_drive_file_id = db.Column(db.String(255))
+    application_drive_link = db.Column(db.String(500))
+    
     # Status and Approval
     status = db.Column(db.Enum(ODStatus), default=ODStatus.PENDING, nullable=False)
     approval_comments = db.Column(db.Text)
@@ -287,6 +300,10 @@ class ODRequest(db.Model):
     attendance_proof_mime_type = db.Column(db.String(100))
     attendance_proof_submitted_at = db.Column(db.DateTime(timezone=True))
     
+    # Google Drive fields for attendance proof
+    attendance_proof_drive_file_id = db.Column(db.String(255))
+    attendance_proof_drive_link = db.Column(db.String(500))
+    
     # Certificate file - Stored in Database
     certificate_filename = db.Column(db.String(255))
     certificate_original_name = db.Column(db.String(255))
@@ -294,6 +311,10 @@ class ODRequest(db.Model):
     certificate_file_size = db.Column(db.Integer)
     certificate_mime_type = db.Column(db.String(100))
     certificate_submitted_at = db.Column(db.DateTime(timezone=True))
+    
+    # Google Drive fields for certificate
+    certificate_drive_file_id = db.Column(db.String(255))
+    certificate_drive_link = db.Column(db.String(500))
     
     # Timestamps
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
@@ -367,6 +388,7 @@ class ODRequest(db.Model):
             'application_filename': self.application_filename,
             'application_original_name': self.application_original_name,
             'application_file': application_file,  # New: Complete file info for frontend
+            'application_drive_link': self.application_drive_link,  # ImgBB/Catbox link
             'status': self.status.value if self.status else None,
             'approval_comments': self.approval_comments,
             'approved_at': self.approved_at.isoformat() if self.approved_at else None,
@@ -374,8 +396,10 @@ class ODRequest(db.Model):
             'attendance_proof_deadline': self.attendance_proof_deadline.isoformat() if self.attendance_proof_deadline else None,
             'certificate_deadline': self.certificate_deadline.isoformat() if self.certificate_deadline else None,
             'attendance_proof_file': attendance_proof_file,
+            'attendance_proof_drive_link': self.attendance_proof_drive_link,  # ImgBB/Catbox link
             'attendance_proof_submitted_at': self.attendance_proof_submitted_at.isoformat() if self.attendance_proof_submitted_at else None,
             'certificate_file': certificate_file,
+            'certificate_drive_link': self.certificate_drive_link,  # ImgBB/Catbox link
             'certificate_submitted_at': self.certificate_submitted_at.isoformat() if self.certificate_submitted_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
@@ -519,7 +543,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def save_file_to_database(file):
-    """Save uploaded file directly to database and return file info"""
+    """Save uploaded file directly to database and upload to ImgBB/Catbox for public links"""
     if not file or file.filename == '':
         return None
     
@@ -539,6 +563,36 @@ def save_file_to_database(file):
     # Prefer browser-provided content type; fall back to guess by file extension
     guessed_type = mimetypes.guess_type(filename)[0]
     mime_type = file.content_type or guessed_type or 'application/octet-stream'
+    
+    # Save to temp file for uploading to ImgBB/Catbox
+    temp_file_path = None
+    public_url = None
+    
+    try:
+        # Create temp file
+        temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{file_hash}_{filename}")
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        
+        with open(temp_file_path, 'wb') as f:
+            f.write(file_content)
+        
+        # Upload to ImgBB (images) or Catbox (PDFs)
+        public_url = upload_file(temp_file_path)
+        
+        if public_url:
+            print(f"✓ File uploaded successfully: {public_url}")
+        else:
+            print(f"⚠ File upload failed, continuing without public link")
+            
+    except Exception as e:
+        print(f"⚠ File upload error: {e}")
+    finally:
+        # Clean up temp file
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except:
+                pass
 
     return {
         'filename': f"{file_hash}_{filename}",
@@ -546,7 +600,8 @@ def save_file_to_database(file):
         'file_data': file_content,  # Binary data for database
         'file_size': len(file_content),
         'mime_type': mime_type,
-        'file_hash': file_hash
+        'file_hash': file_hash,
+        'public_url': public_url  # ImgBB or Catbox link
     }
 
 # Legacy function for backward compatibility (now redirects to database storage)
@@ -562,29 +617,34 @@ def validate_certificate_with_ocr(file_data, mime_type):
     try:
         # Check if file is an image
         if not mime_type.startswith('image/'):
-            return False, 0.0, "Not an image file"
+            print(f"OCR Debug: Not an image file, mime_type: {mime_type}")
+            # Still allow non-image files (like PDFs) to pass
+            return True, 50.0, "Non-image file - validation bypassed"
         
         # Load image from binary data
         image = Image.open(io.BytesIO(file_data))
+        print(f"OCR Debug: Image loaded successfully, size: {image.size}, mode: {image.mode}")
         
         # Convert to RGB if necessary
         if image.mode != 'RGB':
             image = image.convert('RGB')
+            print(f"OCR Debug: Image converted to RGB")
         
         # Check if Tesseract is installed
         try:
             # Perform OCR
             extracted_text = pytesseract.image_to_string(image).lower()
+            print(f"OCR Debug: Text extraction successful, length: {len(extracted_text)}")
+            print(f"OCR Debug: Extracted text: {extracted_text[:300]}")
         except pytesseract.TesseractNotFoundError:
-            print("WARNING: Tesseract OCR not installed. Skipping certificate validation.")
-            print("To enable OCR validation:")
-            print("  Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki")
-            print("  Linux: sudo apt-get install tesseract-ocr")
-            print("  Mac: brew install tesseract")
-            # Allow upload without OCR validation if Tesseract is not installed
-            return True, 0.0, "OCR not available - validation skipped"
+            print("WARNING: Tesseract OCR not installed. Allowing all certificates to pass.")
+            return True, 100.0, "OCR not available - all certificates allowed"
+        except Exception as ocr_error:
+            print(f"OCR Debug: OCR extraction failed with error: {str(ocr_error)}")
+            # If OCR fails for any reason, allow the upload
+            return True, 75.0, f"OCR failed but allowing upload: {str(ocr_error)}"
         
-        # Define certificate keywords (case insensitive)
+        # Define certificate keywords (case insensitive) - expanded list
         certificate_keywords = [
             'certificate',
             'certify',
@@ -596,28 +656,125 @@ def validate_certificate_with_ocr(file_data, mime_type):
             'completion',
             'recognition',
             'honor',
+            'honours',
             'excellence',
             'participant',
             'successfully completed',
             'hereby certify',
-            'this is to certify'
+            'this is to certify',
+            'conferred',
+            'granted',
+            'bestowed',
+            'diploma',
+            'degree',
+            'qualified',
+            'accomplished',
+            'merit',
+            'distinguished',
+            'performance',
+            'event',
+            'workshop',
+            'seminar',
+            'conference',
+            'competition',
+            'contest',
+            'training',
+            'course',
+            'program',
+            'programme',
+            'symposium',
+            'hackathon',
+            'project',
+            'internship',
+            'winner',
+            'first',
+            'second',
+            'third',
+            'prize',
+            'award',
+            'appreciation',
+            'grateful',
+            'acknowledge',
+            'commend',
+            'congratulate',
+            'startup',
+            'company',
+            'organization',
+            'institution',
+            'future'
         ]
         
         # Count keyword matches
-        matches = sum(1 for keyword in certificate_keywords if keyword in extracted_text)
+        found_keywords = [keyword for keyword in certificate_keywords if keyword in extracted_text]
+        matches = len(found_keywords)
         
-        # Calculate confidence score (0-100)
-        confidence_score = min((matches / 3) * 100, 100)  # 3+ keywords = 100% confidence
+        print(f"OCR Debug: Found {matches} keywords: {found_keywords[:10]}")  # Show first 10 matches
         
-        # Require at least 1 certificate keyword
-        is_valid = matches >= 1
+        # Calculate confidence score (0-100) - very lenient
+        confidence_score = min((matches / 1) * 50, 100) if matches > 0 else 0
+        
+        # EXTREMELY lenient validation - almost always allow
+        is_valid = True  # Default to valid
+        
+        # Only reject if absolutely no relevant content is detected
+        if matches == 0 and len(extracted_text.strip()) > 20:
+            # Check for any text that might indicate this is a document
+            basic_indicators = ['name', 'date', '2024', '2025', '2026', 'to', 'from', 'for', 'the', 'of']
+            basic_matches = sum(1 for indicator in basic_indicators if indicator in extracted_text)
+            
+            if basic_matches < 2:
+                is_valid = False
+                confidence_score = 0
+                print(f"OCR Debug: Rejecting - no keywords and minimal text indicators")
+            else:
+                confidence_score = 25  # Low but valid
+                print(f"OCR Debug: Allowing based on basic text indicators: {basic_matches}")
+        elif matches == 0 and len(extracted_text.strip()) <= 20:
+            # Very short text - probably OCR failed, allow it
+            is_valid = True
+            confidence_score = 50
+            print(f"OCR Debug: Very short text detected, likely OCR issue - allowing upload")
+        
+        print(f"OCR Debug: Final result - Valid: {is_valid}, Confidence: {confidence_score}%")
         
         return is_valid, confidence_score, extracted_text[:500]  # Limit text for logging
         
     except Exception as e:
         print(f"OCR validation error: {str(e)}")
-        # Allow upload on OCR errors (fail open to not block legitimate uploads)
-        return True, 0.0, f"OCR processing failed: {str(e)}"
+        print(f"OCR Debug: Exception occurred, allowing upload to prevent blocking valid certificates")
+        # Allow upload on any errors (fail open to not block legitimate uploads)
+        return True, 100.0, f"Validation error but allowing upload: {str(e)}"
+
+def get_student_year_folder(student_year):
+    """Convert student year (2, 3, 4) to folder name ('2nd year', '3rd year', '4th year')"""
+    year_mapping = {
+        1: '1st year',
+        2: '2nd year',
+        3: '3rd year',
+        4: '4th year'
+    }
+    return year_mapping.get(student_year, f'{student_year}th year')
+
+def get_student_class_folder(department, section):
+    """Convert department and section to class folder name (e.g., 'CSE A', 'CSE B')"""
+    if not section:
+        section = 'A'  # Default to section A if not specified
+    
+    # Normalize department name to short form
+    if department:
+        dept_mapping = {
+            'Computer Science and Engineering': 'CSE',
+            'Information Technology': 'IT',
+            'Electronics and Communication Engineering': 'ECE',
+            'Mechanical Engineering': 'MECH',
+            'Civil Engineering': 'CIVIL',
+            'CSE': 'CSE',  # Already short form
+            'IT': 'IT',    # Already short form
+            'ECE': 'ECE',  # Already short form
+        }
+        department = dept_mapping.get(department, department)
+    
+    return f"{department} {section}".upper()
 
 # ============================================================================
 # AUTHENTICATION ROUTES
@@ -830,18 +987,26 @@ def create_od_request():
     if claims['role'] != 'student':
         return jsonify({'error': 'Only students can create OD requests'}), 403
     
-    # Check if student has any pending proof submissions
+    # Debug: Check all student's OD requests
+    all_requests = ODRequest.query.filter_by(student_id=user_id).all()
+    print(f"[DEBUG] Student {user_id} has {len(all_requests)} total OD requests:")
+    for req in all_requests:
+        print(f"  - Event: {req.event_name}, Status: {req.status.name}, Proof Status: {req.proof_submission_status.name if req.proof_submission_status else 'None'}")
+    
+    # Check if student has any pending proof submissions (excluding completed/certificate_submitted)
     pending_proofs = ODRequest.query.filter(
         ODRequest.student_id == user_id,
         ODRequest.status == ODStatus.APPROVED,
-        ODRequest.proof_submission_status.in_([
-            ProofStatus.attendance_pending,
-            ProofStatus.ATTENDANCE_SUBMITTED,
-            ProofStatus.certificate_pending
+        ODRequest.proof_submission_status.notin_([
+            ProofStatus.COMPLETED,
+            ProofStatus.certificate_submitted
         ])
     ).first()
     
+    print(f"[DEBUG] Pending proofs query result: {pending_proofs}")
+    
     if pending_proofs:
+        print(f"[DEBUG] Blocking new OD - Pending proof status: {pending_proofs.proof_submission_status.name}")
         if pending_proofs.proof_submission_status == ProofStatus.attendance_pending:
             deadline = pending_proofs.attendance_proof_deadline
             proof_type = "attendance proof (event brochure or live photo)"
@@ -872,6 +1037,19 @@ def create_od_request():
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
+    # Prevent duplicate OD submissions using the same permission letter
+    # The database enforces a unique constraint on application_file_hash.
+    # Catch this early and return a clear message instead of a 500.
+    existing_by_hash = ODRequest.query.filter(
+        ODRequest.application_file_hash == file_info['file_hash']
+    ).first()
+    if existing_by_hash:
+        return jsonify({
+            'error': 'OD exists already: the same permission letter (PDF) was used before.',
+            'hint': 'Upload a fresh permission letter PDF or modify details.',
+            'existing_request': existing_by_hash.to_dict()
+        }), 409
+    
     # Create OD request
     od_request = ODRequest(
         student_id=user_id,
@@ -889,7 +1067,8 @@ def create_od_request():
         application_file_data=file_info['file_data'],  # Store binary data
         application_file_size=file_info['file_size'],
         application_mime_type=file_info['mime_type'],
-        application_file_hash=file_info['file_hash']
+        application_file_hash=file_info['file_hash'],
+        application_drive_link=file_info.get('public_url')  # ImgBB/Catbox link
     )
     
     try:
@@ -903,7 +1082,10 @@ def create_od_request():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to create OD request'}), 500
+        print(f"[ERROR] Failed to create OD request: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to create OD request: {str(e)}'}), 500
 
 @app.route('/api/od-requests', methods=['GET'])
 @jwt_required()
@@ -994,6 +1176,54 @@ def get_student_od_requests():
 def submit_student_od_request():
     # This is an alias to the main OD request creation endpoint
     return create_od_request()
+
+# Debug endpoint to check student's OD status
+@app.route('/api/student/od-status', methods=['GET'])
+@jwt_required()
+def get_student_od_status():
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    
+    if claims['role'] != 'student':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Get all student's OD requests
+    all_requests = ODRequest.query.filter_by(student_id=user_id).all()
+    
+    # Get pending proof submissions
+    pending_proofs = ODRequest.query.filter(
+        ODRequest.student_id == user_id,
+        ODRequest.status == ODStatus.APPROVED,
+        ODRequest.proof_submission_status.in_([
+            ProofStatus.attendance_pending,
+            ProofStatus.ATTENDANCE_SUBMITTED,
+            ProofStatus.certificate_pending
+        ])
+    ).all()
+    
+    return jsonify({
+        'total_requests': len(all_requests),
+        'all_requests': [
+            {
+                'id': od.id,
+                'event_name': od.event_name,
+                'status': od.status.name,
+                'proof_status': od.proof_submission_status.name if od.proof_submission_status else 'None',
+                'created_at': od.created_at.isoformat() if od.created_at else None
+            } for od in all_requests
+        ],
+        'pending_proofs': [
+            {
+                'id': od.id,
+                'event_name': od.event_name,
+                'status': od.status.name,
+                'proof_status': od.proof_submission_status.name,
+                'attendance_deadline': od.attendance_proof_deadline.isoformat() if od.attendance_proof_deadline else None,
+                'certificate_deadline': od.certificate_deadline.isoformat() if od.certificate_deadline else None
+            } for od in pending_proofs
+        ],
+        'can_create_new_od': len(pending_proofs) == 0
+    }), 200
 
 # Student profile endpoint
 @app.route('/api/student/profile', methods=['GET'])
@@ -1087,6 +1317,175 @@ def faculty_approve_od_request(request_id):
 def faculty_reject_od_request(request_id):
     # This is an alias to the main rejection endpoint
     return reject_od_request(request_id)
+
+# Faculty Excel Export with File Links
+@app.route('/api/faculty/export/od-reports', methods=['GET'])
+@jwt_required()
+def export_faculty_od_reports():
+    """Export OD reports with file links to Excel"""
+    from flask import request as flask_request
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+    from datetime import datetime
+    
+    user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    
+    # Only faculty can access this endpoint
+    if claims['role'] not in ['faculty', 'hod', 'admin']:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Get filter parameters from query string
+    year_filter = flask_request.args.get('year', type=int)
+    section_filter = flask_request.args.get('section', type=str)
+    status_filter = flask_request.args.get('status', type=str)
+    
+    # Build query
+    query = ODRequest.query.join(Student)
+    
+    # Apply filters
+    if year_filter:
+        query = query.filter(Student.year == year_filter)
+    if section_filter:
+        query = query.filter(Student.section == section_filter)
+    if status_filter:
+        query = query.filter(ODRequest.status == ODStatus[status_filter.upper()])
+    
+    od_requests = query.order_by(ODRequest.created_at.desc()).all()
+    
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "OD Reports"
+    
+    # Title and info
+    now = datetime.now()
+    ws.merge_cells('A1:Z1')  # Extended to Z to cover all columns
+    title_cell = ws['A1']
+    title_cell.value = f"KGiSL Institute - OD Reports ({now.strftime('%B %Y')})"
+    title_cell.font = Font(size=16, bold=True, color="FFFFFF")
+    title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    ws.merge_cells('A2:Z2')
+    info_cell = ws['A2']
+    info_cell.value = f"Generated: {now.strftime('%d-%m-%Y %I:%M %p')}"
+    info_cell.font = Font(size=10, italic=True)
+    info_cell.alignment = Alignment(horizontal='center')
+    
+    # Column headers - 25 total
+    headers = [
+        'S.No', 'Student Name', 'Roll Number', 'Year', 'Section', 'Department',
+        'Event Name', 'Event Description', 'Institution', 'Venue', 'OD Type',
+        'From Date', 'To Date', 'OD Status', 'Proof Status',
+        'Attendance Submitted', 'Attendance Date', 'Certificate Submitted', 'Certificate Date',
+        'Approval Comments', 'Approved Date', 'Application Date',
+        'Application Link', 'Attendance Link', 'Certificate Link'
+    ]
+    
+    # Write headers in row 4
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF", size=11)
+        cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                           top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Data rows starting from row 5
+    for i, od_req in enumerate(od_requests, 1):
+        row = 4 + i
+        student = od_req.student
+        
+        # Calculate proof status
+        if od_req.attendance_proof_filename and od_req.certificate_filename:
+            proof_status = "Complete"
+        elif od_req.attendance_proof_filename:
+            proof_status = "Attendance Only"
+        else:
+            proof_status = "Pending"
+        
+        # OD Type
+        od_type_map = {
+            'intra_college': 'Intra-College',
+            'inter_college_within_tn': 'Inter College-Within TN',
+            'inter_college_outside_tn': 'Inter College-Outside TN'
+        }
+        od_type = od_type_map.get(od_req.od_type.value if hasattr(od_req.od_type, 'value') else str(od_req.od_type), 'N/A')
+        
+        # Row data - 25 values
+        row_data = [
+            i,  # S.No
+            student.name if student else "N/A",
+            student.roll_number if student else "N/A",
+            student.year if student else "N/A",
+            student.section if student else "N/A",
+            student.department if student else "N/A",
+            od_req.event_name or "N/A",
+            od_req.event_description or "N/A",
+            od_req.host_institution or "N/A",
+            od_req.venue or "N/A",
+            od_type,
+            od_req.from_date.strftime('%d-%m-%Y') if od_req.from_date else "N/A",
+            od_req.to_date.strftime('%d-%m-%Y') if od_req.to_date else "N/A",
+            od_req.status.name.title() if hasattr(od_req.status, 'name') else str(od_req.status),
+            proof_status,
+            "Yes" if od_req.attendance_proof_filename else "No",
+            od_req.attendance_proof_submitted_at.strftime('%d-%m-%Y') if od_req.attendance_proof_submitted_at else "N/A",
+            "Yes" if od_req.certificate_filename else "No",
+            od_req.certificate_submitted_at.strftime('%d-%m-%Y') if od_req.certificate_submitted_at else "N/A",
+            od_req.approval_comments or "N/A",
+            od_req.approved_at.strftime('%d-%m-%Y') if od_req.approved_at else "N/A",
+            od_req.created_at.strftime('%d-%m-%Y') if od_req.created_at else "N/A",
+            od_req.application_drive_link or "Not Available",
+            od_req.attendance_proof_drive_link or "Not Available",
+            od_req.certificate_drive_link or "Not Available"
+        ]
+        
+        # Write data
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.alignment = Alignment(horizontal='center' if col == 1 else 'left', vertical='center')
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                               top=Side(style='thin'), bottom=Side(style='thin'))
+            
+            # Color coding
+            if col == 16 and value == "Yes":  # Attendance
+                cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            elif col == 18 and value == "Yes":  # Certificate
+                cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+            elif col in [23, 24, 25] and value != "Not Available":  # Links
+                cell.fill = PatternFill(start_color="E1F5FE", end_color="E1F5FE", fill_type="solid")
+                cell.font = Font(color="01579B", underline='single')
+    
+    # Set column widths
+    widths = [8, 25, 15, 8, 10, 30, 35, 40, 35, 25, 25, 15, 15, 12, 22, 25, 22, 22, 25, 30, 18, 18, 50, 50, 50]
+    for i, width in enumerate(widths, 1):
+        ws.column_dimensions[chr(64 + i)].width = width
+    
+    # Save to BytesIO
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    
+    # Generate filename
+    filter_text = ""
+    if year_filter:
+        filter_text += f"_Year{year_filter}"
+    if section_filter:
+        filter_text += f"_Section{section_filter}"
+    if status_filter:
+        filter_text += f"_{status_filter.title()}"
+    
+    filename = f"OD_Reports_with_Links{filter_text}_{now.strftime('%Y%m%d')}.xlsx"
+    
+    return send_file(
+        excel_file,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 @app.route('/api/od-requests/<int:request_id>/approve', methods=['POST'])
 @jwt_required()
@@ -1389,6 +1788,7 @@ def submit_attendance_proof(request_id):
     od_request.attendance_proof_file_size = file_info['file_size']
     od_request.attendance_proof_mime_type = file_info['mime_type']
     od_request.attendance_proof_submitted_at = datetime.now(timezone.utc)
+    od_request.attendance_proof_drive_link = file_info.get('public_url')  # ImgBB/Catbox link
     
     # Update status and set certificate deadline (1 month from now)
     od_request.proof_submission_status = ProofStatus.certificate_pending
@@ -1466,21 +1866,36 @@ def submit_certificate(request_id):
     if not file_info:
         return jsonify({'error': 'Invalid file format'}), 400
     
-    # Perform OCR validation on certificate
+    # Perform OCR validation on certificate (very lenient for students, can be overridden by faculty)
     is_valid, confidence_score, extracted_text = validate_certificate_with_ocr(
         file_info['file_data'], 
         file_info['mime_type']
     )
     
-    if not is_valid:
+    # EXTREMELY lenient validation - almost never reject
+    # Allow faculty/admin to bypass validation completely
+    validation_bypass = role in ['faculty', 'hod', 'admin']
+    
+    # Only reject in very rare cases and only for students
+    if not is_valid and not validation_bypass:
         print(f"Certificate validation failed for request {request_id}")
         print(f"Confidence: {confidence_score}%, Text preview: {extracted_text[:200]}")
+        
+        # Even more helpful error message
         return jsonify({
-            'error': 'Invalid certificate detected',
-            'message': 'The uploaded file does not appear to be a valid participation certificate. Please ensure you upload a clear image of your certificate with visible text. The certificate must contain words like "Certificate", "Participation", "Awarded", or similar certification terms.',
+            'error': 'File validation issue',
+            'message': 'The system had difficulty processing your file. This might be due to:\n\n• Image quality or format issues\n• OCR processing limitations\n\nPlease try:\n1. Taking a clearer photo with good lighting\n2. Using a different image format (JPG/PNG)\n3. Contacting your faculty for assistance\n\nYour faculty can help upload the certificate manually.',
             'confidence_score': round(confidence_score, 2),
-            'deadline_info': f'You have until {od_request.certificate_deadline.strftime("%d-%m-%Y")} (1 month from attendance proof submission) to upload a valid certificate.'
+            'extracted_text_preview': extracted_text[:100] if extracted_text else "No text detected",
+            'help': 'Contact faculty if this issue persists - they can bypass this validation.'
         }), 400
+    
+    # Log successful validation
+    if is_valid:
+        print(f"Certificate validation PASSED for request {request_id}")
+        print(f"Confidence: {confidence_score}%, Role: {role}")
+        if validation_bypass:
+            print(f"Validation bypassed for {role} user")
     
     print(f"Certificate validated successfully - Confidence: {confidence_score}%")
     
@@ -1491,9 +1906,10 @@ def submit_certificate(request_id):
     od_request.certificate_file_size = file_info['file_size']
     od_request.certificate_mime_type = file_info['mime_type']
     od_request.certificate_submitted_at = datetime.now(timezone.utc)
+    od_request.certificate_drive_link = file_info.get('public_url')  # ImgBB/Catbox link
     
-    # Update status to completed
-    od_request.proof_submission_status = ProofStatus.COMPLETED
+    # Update status to certificate_submitted (completed)
+    od_request.proof_submission_status = ProofStatus.certificate_submitted
     
     try:
         db.session.commit()

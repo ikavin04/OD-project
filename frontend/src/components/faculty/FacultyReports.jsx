@@ -29,7 +29,14 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
     const loadImage = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await api.get(`/od/view/${requestId}/${fileType}`, {
+        
+        // Map fileType to backend-compatible format
+        let backendFileType = fileType;
+        if (fileType === 'attendance-proof') {
+          backendFileType = 'attendance_proof';
+        }
+        
+        const response = await api.get(`/od/view/${requestId}/${backendFileType}`, {
           responseType: 'blob',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -201,7 +208,13 @@ const FacultyReports = () => {
 
   const handleDownloadDocument = async (requestId, fileType) => {
     try {
-      const response = await api.get(`/od/${requestId}/download-${fileType}`, {
+      // Map fileType to backend-compatible format
+      let backendFileType = fileType;
+      if (fileType === 'attendance-proof') {
+        backendFileType = 'attendance_proof';
+      }
+      
+      const response = await api.get(`/od/download/${requestId}/${backendFileType}`, {
         responseType: 'blob'
       });
 
@@ -279,79 +292,28 @@ const FacultyReports = () => {
     return statusText[proofStatus] || 'Not Submitted';
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
-      // Prepare data for Excel
-      const excelData = filteredRequests.map((request, index) => ({
-        'S.No': index + 1,
-        'Student Name': request.student?.name || 'N/A',
-        'Roll Number': request.student?.roll_number || 'N/A',
-        'Year': request.student?.year || 'N/A',
-        'Section': request.student?.section || 'N/A',
-        'Department': request.student?.department || 'N/A',
-        'Event Name': request.event_name || 'N/A',
-        'Event Description': request.event_description || 'N/A',
-        'Institution': request.host_institution || 'N/A',
-        'Venue': request.venue || 'N/A',
-        'OD Type': request.od_type === 'intra_college' ? 'Intra-College' : 
-                   request.od_type === 'inter_college_within_tn' ? 'Inter College-Within TN' :
-                   request.od_type === 'inter_college_outside_tn' ? 'Inter College-Outside TN' : 'N/A',
-        'From Date': request.from_date ? format(new Date(request.from_date), 'dd-MMM-yyyy') : 'N/A',
-        'To Date': request.to_date ? format(new Date(request.to_date), 'dd-MMM-yyyy') : 'N/A',
-        'OD Status': request.status === 'approved' ? 'Approved' : 
-                     request.status === 'rejected' ? 'Rejected' : 'Pending',
-        'Proof Submission Status': request.attendance_proof && request.certificate ? 'Complete' :
-                                   request.attendance_proof ? 'Attendance Only' : 'Pending',
-        'Attendance Proof Submitted': request.attendance_proof_file_data || request.attendance_proof?.filename ? 'Yes' : 'No',
-        'Attendance Submitted Date': request.attendance_proof?.uploaded_at ? 
-                                     format(new Date(request.attendance_proof.uploaded_at), 'dd-MMM-yyyy') : 'N/A',
-        'Certificate Submitted': request.certificate_file_data || request.certificate?.filename ? 'Yes' : 'No',
-        'Certificate Submitted Date': request.certificate?.uploaded_at ? 
-                                      format(new Date(request.certificate.uploaded_at), 'dd-MMM-yyyy') : 'N/A',
-        'Approval Comments': request.faculty_comments || 'N/A',
-        'Approved Date': request.approved_date ? format(new Date(request.approved_date), 'dd-MMM-yyyy') : 'N/A',
-        'Request Created Date': request.created_at ? format(new Date(request.created_at), 'dd-MMM-yyyy') : 'N/A'
-      }));
-
-      // Create worksheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-      // Set column widths
-      const columnWidths = [
-        { wch: 6 },  // S.No
-        { wch: 20 }, // Student Name
-        { wch: 15 }, // Roll Number
-        { wch: 6 },  // Year
-        { wch: 8 },  // Section
-        { wch: 25 }, // Department
-        { wch: 30 }, // Event Name
-        { wch: 40 }, // Event Description
-        { wch: 35 }, // Institution
-        { wch: 25 }, // Venue
-        { wch: 25 }, // OD Type
-        { wch: 15 }, // From Date
-        { wch: 15 }, // To Date
-        { wch: 12 }, // OD Status
-        { wch: 22 }, // Proof Submission Status
-        { wch: 25 }, // Attendance Proof Submitted
-        { wch: 22 }, // Attendance Submitted Date
-        { wch: 22 }, // Certificate Submitted
-        { wch: 25 }, // Certificate Submitted Date
-        { wch: 30 }, // Approval Comments
-        { wch: 18 }, // Approved Date
-        { wch: 20 }  // Request Created Date
-      ];
-      worksheet['!cols'] = columnWidths;
-
-      // Create workbook
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'OD Reports');
-
-      // Generate filename with current date
-      const filename = `OD_Reports_${format(new Date(), 'dd-MM-yyyy_HHmm')}.xlsx`;
-
-      // Download file
-      XLSX.writeFile(workbook, filename);
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (filters.year) params.append('year', filters.year);
+      if (filters.section) params.append('section', filters.section);
+      if (filters.status) params.append('status', filters.status);
+      
+      // Call backend API to generate Excel with all columns including links
+      const response = await api.get(`/faculty/export/od-reports?${params.toString()}`, {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `OD_Reports_${format(new Date(), 'dd-MM-yyyy_HHmm')}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
       toast.success(`Exported ${filteredRequests.length} records to Excel`);
     } catch (error) {
