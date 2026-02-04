@@ -31,6 +31,11 @@ from PIL import Image
 import pytesseract
 import io
 
+# APScheduler for automated tasks
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import atexit
+
 # ImgBB & Catbox file upload integration
 from imgbb_catbox_helper import upload_file
 
@@ -67,7 +72,6 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or 'vijayarajm2308@gmail.com'
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or 'khbtrvvazhskyguu'
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'vijayarajm2308@gmail.com'
-    MAIL_DEBUG = True
     MAIL_SUPPRESS_SEND = False
     
     # File upload configuration
@@ -93,7 +97,6 @@ app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_USERNAME'] = 'vijayarajm2308@gmail.com'
 app.config['MAIL_PASSWORD'] = 'khbtrvvazhskyguu'
 app.config['MAIL_DEFAULT_SENDER'] = 'vijayarajm2308@gmail.com'
-app.config['MAIL_DEBUG'] = True
 app.config['MAIL_SUPPRESS_SEND'] = False
 
 # Initialize extensions
@@ -111,13 +114,14 @@ cors = CORS(app,
 limiter = Limiter(key_func=get_remote_address)
 limiter.init_app(app)
 
-# Debug: Print actual mail configuration
-print(f"🔧 Mail Configuration Debug:")
-print(f"   MAIL_USERNAME: {app.config.get('MAIL_USERNAME')}")
-print(f"   MAIL_PASSWORD: {'*' * len(app.config.get('MAIL_PASSWORD', '')) if app.config.get('MAIL_PASSWORD') else 'None'}")
-print(f"   MAIL_DEFAULT_SENDER: {app.config.get('MAIL_DEFAULT_SENDER')}")
-
 mail = Mail(app)
+
+# Initialize APScheduler for automated tasks
+scheduler = BackgroundScheduler(daemon=True)
+scheduler.start()
+
+# Ensure scheduler shuts down when app exits
+atexit.register(lambda: scheduler.shutdown())
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -518,17 +522,9 @@ def send_od_status_email(student_email: str, student_name: str, od_request: ODRe
         )
         
         mail.send(msg)
-        print(f"Email sent successfully to {student_email}")
         return True
         
     except Exception as e:
-        print(f"Failed to send email to {student_email}: {str(e)}")
-        # Log in DEMO MODE
-        print(f"DEMO MODE - Email would be sent:")
-        print(f"   To: {student_email}")
-        print(f"   Subject: {subject}")
-        print(f"   Status: {status}")
-        print(f"   Faculty: {faculty_name}")
         return False
 
 # ============================================================================
@@ -575,14 +571,9 @@ def save_file_to_database(file):
         
         # Upload to ImgBB (images) or Catbox (PDFs)
         public_url = upload_file(temp_file_path)
-        
-        if public_url:
-            print(f"✓ File uploaded successfully: {public_url}")
-        else:
-            print(f"⚠ File upload failed, continuing without public link")
             
     except Exception as e:
-        print(f"⚠ File upload error: {e}")
+        pass
     finally:
         # Clean up temp file
         if temp_file_path and os.path.exists(temp_file_path):
@@ -614,30 +605,23 @@ def validate_certificate_with_ocr(file_data, mime_type):
     try:
         # Check if file is an image
         if not mime_type.startswith('image/'):
-            print(f"OCR Debug: Not an image file, mime_type: {mime_type}")
             # Still allow non-image files (like PDFs) to pass
             return True, 50.0, "Non-image file - validation bypassed"
         
         # Load image from binary data
         image = Image.open(io.BytesIO(file_data))
-        print(f"OCR Debug: Image loaded successfully, size: {image.size}, mode: {image.mode}")
         
         # Convert to RGB if necessary
         if image.mode != 'RGB':
             image = image.convert('RGB')
-            print(f"OCR Debug: Image converted to RGB")
         
         # Check if Tesseract is installed
         try:
             # Perform OCR
             extracted_text = pytesseract.image_to_string(image).lower()
-            print(f"OCR Debug: Text extraction successful, length: {len(extracted_text)}")
-            print(f"OCR Debug: Extracted text: {extracted_text[:300]}")
         except pytesseract.TesseractNotFoundError:
-            print("WARNING: Tesseract OCR not installed. Allowing all certificates to pass.")
             return True, 100.0, "OCR not available - all certificates allowed"
         except Exception as ocr_error:
-            print(f"OCR Debug: OCR extraction failed with error: {str(ocr_error)}")
             # If OCR fails for any reason, allow the upload
             return True, 75.0, f"OCR failed but allowing upload: {str(ocr_error)}"
         
@@ -705,8 +689,6 @@ def validate_certificate_with_ocr(file_data, mime_type):
         found_keywords = [keyword for keyword in certificate_keywords if keyword in extracted_text]
         matches = len(found_keywords)
         
-        print(f"OCR Debug: Found {matches} keywords: {found_keywords[:10]}")  # Show first 10 matches
-        
         # Calculate confidence score (0-100) - very lenient
         confidence_score = min((matches / 1) * 50, 100) if matches > 0 else 0
         
@@ -722,23 +704,16 @@ def validate_certificate_with_ocr(file_data, mime_type):
             if basic_matches < 2:
                 is_valid = False
                 confidence_score = 0
-                print(f"OCR Debug: Rejecting - no keywords and minimal text indicators")
             else:
                 confidence_score = 25  # Low but valid
-                print(f"OCR Debug: Allowing based on basic text indicators: {basic_matches}")
         elif matches == 0 and len(extracted_text.strip()) <= 20:
             # Very short text - probably OCR failed, allow it
             is_valid = True
             confidence_score = 50
-            print(f"OCR Debug: Very short text detected, likely OCR issue - allowing upload")
-        
-        print(f"OCR Debug: Final result - Valid: {is_valid}, Confidence: {confidence_score}%")
         
         return is_valid, confidence_score, extracted_text[:500]  # Limit text for logging
         
     except Exception as e:
-        print(f"OCR validation error: {str(e)}")
-        print(f"OCR Debug: Exception occurred, allowing upload to prevent blocking valid certificates")
         # Allow upload on any errors (fail open to not block legitimate uploads)
         return True, 100.0, f"Validation error but allowing upload: {str(e)}"
 
@@ -813,7 +788,8 @@ def student_register():
         
         # Create tokens
         access_token = create_access_token(
-            identity={'id': student.id, 'email': student.email, 'role': 'student'}
+            identity=str(student.id),
+            additional_claims={'role': 'student', 'email': student.email}
         )
         
         return jsonify({
@@ -848,7 +824,8 @@ def student_login():
     
     # Create tokens
     access_token = create_access_token(
-        identity={'id': student.id, 'email': student.email, 'role': 'student'}
+        identity=str(student.id),
+        additional_claims={'role': 'student', 'email': student.email}
     )
     
     return jsonify({
@@ -879,7 +856,8 @@ def faculty_login():
     
     # Create tokens
     access_token = create_access_token(
-        identity={'id': faculty.id, 'email': faculty.email, 'role': faculty.role.value}
+        identity=str(faculty.id),
+        additional_claims={'role': faculty.role.value, 'email': faculty.email}
     )
     
     return jsonify({
@@ -984,12 +962,6 @@ def create_od_request():
     if claims['role'] != 'student':
         return jsonify({'error': 'Only students can create OD requests'}), 403
     
-    # Debug: Check all student's OD requests
-    all_requests = ODRequest.query.filter_by(student_id=user_id).all()
-    print(f"[DEBUG] Student {user_id} has {len(all_requests)} total OD requests:")
-    for req in all_requests:
-        print(f"  - Event: {req.event_name}, Status: {req.status.name}, Proof Status: {req.proof_submission_status.name if req.proof_submission_status else 'None'}")
-    
     # Check if student has any pending proof submissions (excluding completed/certificate_submitted)
     pending_proofs = ODRequest.query.filter(
         ODRequest.student_id == user_id,
@@ -1000,10 +972,7 @@ def create_od_request():
         ])
     ).first()
     
-    print(f"[DEBUG] Pending proofs query result: {pending_proofs}")
-    
     if pending_proofs:
-        print(f"[DEBUG] Blocking new OD - Pending proof status: {pending_proofs.proof_submission_status.name}")
         if pending_proofs.proof_submission_status == ProofStatus.attendance_pending:
             deadline = pending_proofs.attendance_proof_deadline
             proof_type = "attendance proof (event brochure or live photo)"
@@ -1079,9 +1048,6 @@ def create_od_request():
         
     except Exception as e:
         db.session.rollback()
-        print(f"[ERROR] Failed to create OD request: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': f'Failed to create OD request: {str(e)}'}), 500
 
 @app.route('/api/od-requests', methods=['GET'])
@@ -1517,7 +1483,6 @@ def approve_od_request(request_id):
         
         # Send email notification
         faculty = Faculty.query.get(user_id)
-        print(f"Sending approval email to {od_request.student.email}")
         email_sent = send_od_status_email(
             student_email=od_request.student.email,
             student_name=od_request.student.name,
@@ -1526,7 +1491,6 @@ def approve_od_request(request_id):
             faculty_name=faculty.name,
             comments=od_request.approval_comments
         )
-        print(f"Email sent result: {email_sent}")
         
         return jsonify({
             'message': 'OD request approved successfully. Student must submit attendance proof within 3 days.',
@@ -1560,7 +1524,6 @@ def reject_od_request(request_id):
         
         # Send email notification
         faculty = Faculty.query.get(user_id)
-        print(f"Sending rejection email to {od_request.student.email}")
         email_sent = send_od_status_email(
             student_email=od_request.student.email,
             student_name=od_request.student.name,
@@ -1569,7 +1532,6 @@ def reject_od_request(request_id):
             faculty_name=faculty.name,
             comments=od_request.approval_comments
         )
-        print(f"Email sent result: {email_sent}")
         
         return jsonify({
             'message': 'OD request rejected successfully',
@@ -1818,10 +1780,7 @@ def submit_certificate(request_id):
     od_request = ODRequest.query.get_or_404(request_id)
     
     role = claims.get('role')
-    try:
-        print(f"[DEBUG] submit_certificate: role={role}, user_id={user_id}, request_id={request_id}")
-    except Exception:
-        pass
+    
     # Permission rules:
     # - Students can submit for their own request
     # - Faculty/HOD/Admin can submit on behalf of the student (e.g., assisted upload)
@@ -1880,9 +1839,6 @@ def submit_certificate(request_id):
     
     # Only reject in very rare cases and only for students
     if not is_valid and not validation_bypass:
-        print(f"Certificate validation failed for request {request_id}")
-        print(f"Confidence: {confidence_score}%, Text preview: {extracted_text[:200]}")
-        
         # Even more helpful error message
         return jsonify({
             'error': 'File validation issue',
@@ -1891,15 +1847,6 @@ def submit_certificate(request_id):
             'extracted_text_preview': extracted_text[:100] if extracted_text else "No text detected",
             'help': 'Contact faculty if this issue persists - they can bypass this validation.'
         }), 400
-    
-    # Log successful validation
-    if is_valid:
-        print(f"Certificate validation PASSED for request {request_id}")
-        print(f"Confidence: {confidence_score}%, Role: {role}")
-        if validation_bypass:
-            print(f"Validation bypassed for {role} user")
-    
-    print(f"Certificate validated successfully - Confidence: {confidence_score}%")
     
     # Update OD request with certificate
     od_request.certificate_filename = file_info['filename']
@@ -2067,6 +2014,170 @@ def get_stats():
     return jsonify(stats), 200
 
 # ============================================================================
+# AUTOMATED SCHEDULED TASKS
+# ============================================================================
+
+def send_proof_deadline_reminders_job():
+    """
+    Automated job to send proof deadline reminders
+    Runs daily to check for deadlines 2 days ahead
+    """
+    with app.app_context():
+        try:
+            # Calculate the target date (2 days from now)
+            now = datetime.now(timezone.utc)
+            reminder_date_start = now + timedelta(days=2)
+            reminder_date_end = reminder_date_start + timedelta(hours=23, minutes=59, seconds=59)
+            
+            # Find students with attendance proof deadline in 2 days
+            attendance_pending = ODRequest.query.filter(
+                ODRequest.status == ODStatus.APPROVED,
+                ODRequest.proof_submission_status == ProofStatus.attendance_pending,
+                ODRequest.attendance_proof_deadline >= reminder_date_start,
+                ODRequest.attendance_proof_deadline <= reminder_date_end
+            ).all()
+            
+            # Send attendance proof reminders
+            for od_request in attendance_pending:
+                student = od_request.student
+                if student and student.email:
+                    try:
+                        # Send email
+                        msg = Message(
+                            subject="⏰ Reminder: Attendance Proof Submission Deadline Approaching",
+                            sender=app.config['MAIL_DEFAULT_SENDER'],
+                            recipients=[student.email]
+                        )
+                        
+                        deadline = od_request.attendance_proof_deadline.strftime('%d-%m-%Y %I:%M %p')
+                        
+                        msg.html = f"""
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #f57c00;">Deadline Reminder</h2>
+                            <p>Dear {student.name},</p>
+                            <p>This is a reminder that your <strong>attendance proof submission deadline</strong> is approaching in <strong>2 days</strong>.</p>
+                            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="color: #856404;">Event Details:</h3>
+                                <ul>
+                                    <li><strong>Event:</strong> {od_request.event_name}</li>
+                                    <li><strong>Deadline:</strong> {deadline}</li>
+                                    <li><strong>Required:</strong> Attendance proof (event brochure or live photo)</li>
+                                </ul>
+                            </div>
+                            <p><strong>Action Required:</strong> Please submit your attendance proof before the deadline to avoid any issues.</p>
+                            <p>Login to the student portal to upload your documents.</p>
+                            <p>Best regards,<br>OD Management System<br>KGISL Institute of Technology</p>
+                        </div>
+                        """
+                        
+                        mail.send(msg)
+                    except Exception as e:
+                        pass
+            
+            # Find students with certificate deadline in 2 days
+            certificate_pending = ODRequest.query.filter(
+                ODRequest.status == ODStatus.APPROVED,
+                ODRequest.proof_submission_status.in_([ProofStatus.ATTENDANCE_SUBMITTED, ProofStatus.certificate_pending]),
+                ODRequest.certificate_deadline >= reminder_date_start,
+                ODRequest.certificate_deadline <= reminder_date_end
+            ).all()
+            
+            # Send certificate reminders
+            for od_request in certificate_pending:
+                student = od_request.student
+                if student and student.email:
+                    try:
+                        # Send email
+                        msg = Message(
+                            subject="⏰ Reminder: Certificate Submission Deadline Approaching",
+                            sender=app.config['MAIL_DEFAULT_SENDER'],
+                            recipients=[student.email]
+                        )
+                        
+                        deadline = od_request.certificate_deadline.strftime('%d-%m-%Y %I:%M %p')
+                        
+                        msg.html = f"""
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #f57c00;">Deadline Reminder</h2>
+                            <p>Dear {student.name},</p>
+                            <p>This is a reminder that your <strong>participation certificate submission deadline</strong> is approaching in <strong>2 days</strong>.</p>
+                            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                <h3 style="color: #856404;">Event Details:</h3>
+                                <ul>
+                                    <li><strong>Event:</strong> {od_request.event_name}</li>
+                                    <li><strong>Deadline:</strong> {deadline}</li>
+                                    <li><strong>Required:</strong> Participation Certificate</li>
+                                </ul>
+                            </div>
+                            <p><strong>Action Required:</strong> Please submit your participation certificate before the deadline.</p>
+                            <p>Login to the student portal to upload your certificate.</p>
+                            <p>Best regards,<br>OD Management System<br>KGISL Institute of Technology</p>
+                        </div>
+                        """
+                        
+                        mail.send(msg)
+                    except Exception as e:
+                        pass
+                        
+        except Exception as e:
+            pass
+
+def send_monthly_faculty_reports_job():
+    """
+    Automated job to send monthly faculty reports
+    Runs on the last day of every month
+    """
+    with app.app_context():
+        try:
+            from monthly_report import generate_monthly_od_report
+            
+            # Generate report
+            excel_file = generate_monthly_od_report(db, Student, ODRequest, Faculty, ProofStatus, mail)
+            
+            if not excel_file:
+                return
+            
+            excel_file.seek(0)
+            
+            # Get all faculty members
+            faculty_list = Faculty.query.filter(Faculty.role.in_([UserRole.FACULTY, UserRole.HOD, UserRole.ADMIN])).all()
+            
+            # Send to each faculty
+            for faculty in faculty_list:
+                if faculty.email:
+                    try:
+                        now = datetime.now()
+                        month_name = now.strftime("%B %Y")
+                        
+                        msg = Message(
+                            subject=f"📊 Monthly OD Report - {month_name}",
+                            sender=app.config['MAIL_DEFAULT_SENDER'],
+                            recipients=[faculty.email]
+                        )
+                        
+                        msg.html = f"""
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #1976d2;">Monthly OD Report</h2>
+                            <p>Dear {faculty.name},</p>
+                            <p>Please find attached the monthly OD proof submission status report for <strong>{month_name}</strong>.</p>
+                            <p>The report contains details of all approved OD requests and their proof submission status.</p>
+                            <p>Best regards,<br>OD Management System<br>KGISL Institute of Technology</p>
+                        </div>
+                        """
+                        
+                        # Attach Excel file
+                        excel_file.seek(0)
+                        filename = f"OD_Report_{month_name.replace(' ', '_')}.xlsx"
+                        msg.attach(filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', excel_file.read())
+                        
+                        mail.send(msg)
+                    except Exception as e:
+                        pass
+                        
+        except Exception as e:
+            pass
+
+# ============================================================================
 # DATABASE INITIALIZATION
 # ============================================================================
 
@@ -2074,7 +2185,6 @@ def get_stats():
 def init_db_command():
     """Initialize the database"""
     db.create_all()
-    print("Database initialized!")
 
 @app.cli.command("create-admin")
 def create_admin_command():
@@ -2090,7 +2200,6 @@ def create_admin_command():
     
     db.session.add(admin)
     db.session.commit()
-    print("Admin user created! Email: admin@college.edu, Password: admin123")
 
 # ============================================================================
 # CORS HANDLERS
@@ -2176,8 +2285,29 @@ def trigger_monthly_report():
         }), 200
         
     except Exception as e:
-        print(f"Error generating monthly report: {str(e)}")
         return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+
+# ============================================================================
+# SCHEDULER CONFIGURATION
+# ============================================================================
+
+# Schedule daily proof deadline reminders at 9:00 AM
+scheduler.add_job(
+    func=send_proof_deadline_reminders_job,
+    trigger=CronTrigger(hour=9, minute=0),  # 9:00 AM every day
+    id='proof_deadline_reminders',
+    name='Send proof deadline reminders to students',
+    replace_existing=True
+)
+
+# Schedule monthly faculty reports on the last day of every month at 11:00 PM
+scheduler.add_job(
+    func=send_monthly_faculty_reports_job,
+    trigger=CronTrigger(day='last', hour=23, minute=0),  # 11:00 PM on last day of month
+    id='monthly_faculty_reports',
+    name='Send monthly OD reports to faculty',
+    replace_existing=True
+)
 
 # ============================================================================
 # MAIN APPLICATION
@@ -2187,10 +2317,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     
-    print("🚀 OD Management System Backend Server Starting...")
-    print("📧 Email notifications enabled")
-    print("🔐 JWT authentication active")
-    print("📁 File upload configured")
-    print("🌐 CORS enabled for frontend")
-    
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)

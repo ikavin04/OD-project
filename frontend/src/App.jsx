@@ -14,7 +14,6 @@ import ProofSubmission from './components/student/ProofSubmission';
 import FacultyDashboard from './components/faculty/FacultyDashboard';
 import FacultyProfile from './components/faculty/FacultyProfile';
 import FacultyReports from './components/faculty/FacultyReports';
-import DebugPage from './components/debug/DebugPage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -28,8 +27,6 @@ const queryClient = new QueryClient({
 
 function AppRoutes() {
   const { loading, isAuthenticated, user } = useAuth();
-
-  console.log('🔄 AppRoutes render - loading:', loading, 'isAuthenticated:', isAuthenticated, 'user:', user);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -107,12 +104,6 @@ function AppRoutes() {
               <FacultyReports />
             </ProtectedRoute>
           } 
-        />
-
-        {/* Debug Page */}
-        <Route 
-          path="/debug" 
-          element={<DebugPage />} 
         />
 
         {/* 404 Route */}

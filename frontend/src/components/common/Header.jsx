@@ -28,97 +28,104 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
-          <div className="flex items-center flex-1 sm:flex-initial">
+          <div className="flex items-center flex-shrink-0">
             <Link to={user?.role === 'student' ? '/student' : '/faculty'} className="flex items-center" onClick={closeMobileMenu}>
               <img 
                 src="/Logo.jpeg" 
                 alt="College Logo"
                 className="h-7 w-7 sm:h-10 sm:w-10 object-cover rounded flex-shrink-0"
               />
-              <span className="ml-2 text-base sm:text-lg md:text-xl font-bold text-secondary-900 truncate">
+              {/* Full title on large screens, abbreviated on medium, hidden on small */}
+              <span className="ml-2 font-bold text-secondary-900 hidden lg:block text-lg">
                 Students On-Duty Management System
               </span>
+              <span className="ml-2 font-bold text-secondary-900 hidden md:block lg:hidden text-base">
+                OD Management
+              </span>
+              <span className="ml-2 font-bold text-secondary-900 md:hidden text-sm">
+                OD System
+              </span>
             </Link>
+          </div>
             
             {/* Desktop Navigation for Students */}
             {user?.role === 'student' && (
-              <nav className="hidden md:flex ml-6 lg:ml-8 space-x-4 lg:space-x-6">
+              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 ml-4">
                 <Link
                   to="/student"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive('/student')
                       ? 'text-primary-700 bg-primary-50'
                       : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
                   }`}
                 >
                   <Home className="h-4 w-4" />
-                  <span>Dashboard</span>
+                  <span className="hidden lg:inline">Dashboard</span>
                 </Link>
                 <Link
                   to="/student/proofs"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive('/student/proofs')
                       ? 'text-primary-700 bg-primary-50'
                       : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
                   }`}
                 >
                   <Upload className="h-4 w-4" />
-                  <span>Submit Proofs</span>
+                  <span className="hidden lg:inline">Submit Proofs</span>
                 </Link>
               </nav>
             )}
 
             {/* Desktop Navigation for Faculty */}
             {user?.role && ['faculty', 'hod', 'admin'].includes(user.role) && (
-              <nav className="hidden md:flex ml-6 lg:ml-8 space-x-4 lg:space-x-6">
+              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 ml-4">
                 <Link
                   to="/faculty"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive('/faculty')
                       ? 'text-primary-700 bg-primary-50'
                       : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
                   }`}
                 >
                   <Home className="h-4 w-4" />
-                  <span>OD Requests</span>
+                  <span className="hidden lg:inline">OD Requests</span>
                 </Link>
                 <Link
                   to="/faculty/reports"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive('/faculty/reports')
                       ? 'text-primary-700 bg-primary-50'
                       : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
                   }`}
                 >
                   <FileText className="h-4 w-4" />
-                  <span>Reports</span>
+                  <span className="hidden lg:inline">Reports</span>
                 </Link>
                 <Link
                   to="/faculty/profile"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive('/faculty/profile')
                       ? 'text-primary-700 bg-primary-50'
                       : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
                   }`}
                 >
                   <User className="h-4 w-4" />
-                  <span>Profile</span>
+                  <span className="hidden lg:inline">Profile</span>
                 </Link>
               </nav>
             )}
-          </div>
 
           {/* Desktop User Info & Logout */}
-          <div className="hidden md:flex items-center gap-3 lg:gap-4">
+          <div className="hidden md:flex items-center gap-2 lg:gap-4 ml-auto">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 bg-secondary-200 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="h-5 w-5 text-secondary-600" />
+              <div className="h-7 w-7 lg:h-8 lg:w-8 bg-secondary-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="h-4 w-4 lg:h-5 lg:w-5 text-secondary-600" />
               </div>
-              <div className="hidden lg:block">
+              <div className="hidden xl:block">
                 <div className="text-sm font-medium text-secondary-900 truncate max-w-[150px]">
                   {user?.name || user?.email}
                 </div>
-                <div className="text-xs text-secondary-500 capitalize truncate">
+                <div className="text-xs text-secondary-500 capitalize truncate max-w-[150px]">
                   {user?.role}
                   {user?.department && ` - ${user.department}`}
                 </div>
@@ -127,10 +134,10 @@ const Header = () => {
             
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-2 text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50 rounded-md transition-colors"
+              className="flex items-center gap-1 px-2 lg:px-3 py-2 text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50 rounded-md transition-colors"
             >
               <LogOut className="h-4 w-4" />
-              <span className="text-sm font-medium">Logout</span>
+              <span className="text-xs lg:text-sm font-medium">Logout</span>
             </button>
           </div>
 

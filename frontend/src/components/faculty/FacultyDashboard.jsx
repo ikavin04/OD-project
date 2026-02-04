@@ -39,7 +39,6 @@ const AuthenticatedImage = ({ requestId, fileType, alt, className, onClick }) =>
 
         // Ensure the Blob has the correct MIME type so browsers can render it inline
         const contentType = response.headers['content-type'] || 'application/octet-stream';
-        console.debug('[AuthenticatedImage] Loaded blob', { requestId, fileType, contentType, size: response.data?.size });
         const blob = new Blob([response.data], { type: contentType });
         objectUrl = window.URL.createObjectURL(blob);
         setImageSrc(objectUrl);
@@ -204,9 +203,6 @@ const FacultyDashboard = () => {
 
   const fetchODRequests = async () => {
     try {
-      console.log('[INFO] Fetching OD requests for faculty...');
-      console.log('[AUTH] Current auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
-      
       // Build query parameters
       const params = {};
       if (yearFilter && yearFilter !== 'all') {
@@ -216,40 +212,23 @@ const FacultyDashboard = () => {
         params.section = sectionFilter;
       }
       
-      console.log('[FILTERS] Applying filters:', params);
-      
       const response = await api.get('/faculty/od-requests', { params });
-      console.log('[OK] Faculty OD requests response status:', response.status);
-      console.log('[DATA] Faculty OD requests response data:', response.data);
-      console.log('[STATS] Number of requests received:', response.data.od_requests?.length || 0);
       
       setOdRequests(response.data.od_requests || []);
       
       if (response.data.od_requests?.length > 0) {
-        console.log('[ACTION] First request details:', response.data.od_requests[0]);
         // Use a fixed toast id to avoid duplicate toasts (React StrictMode may call effects twice)
         toast.success(`Loaded ${response.data.od_requests.length} OD requests successfully!`, { id: 'od-requests-loaded' });
-      } else {
-        console.log('[INFO] No OD requests found');
-        // toast.info is not available in react-hot-toast, using console log instead
       }
       
     } catch (error) {
-      console.error('[ERROR] API Error:', error);
-      console.error('[ERROR] Error response status:', error.response?.status);
-      console.error('[ERROR] Error response data:', error.response?.data);
-      console.error('[ERROR] Error message:', error.message);
-      
       if (error.response?.status === 401) {
-        console.log('[AUTH] Authentication error - user may need to re-login');
         toast.error('Session expired. Please refresh and login again.');
         setOdRequests([]);
       } else if (error.response?.status === 403) {
-        console.log('[ACCESS] Access denied - insufficient permissions');
         toast.error('Access denied. You may not have faculty permissions.');
         setOdRequests([]);
       } else {
-        console.log('[ERROR] Other error occurred');
         toast.error(`Failed to fetch OD requests: ${error.response?.data?.message || error.message}`);
         setOdRequests([]);
       }

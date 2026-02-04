@@ -23,16 +23,14 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('user');
       
       if (token) {
-        console.log('Token found in localStorage, verifying with server...');
         
         // First, set user from localStorage for immediate UI update
         if (savedUser) {
           try {
             const parsedUser = JSON.parse(savedUser);
             setUser(parsedUser);
-            console.log('[OK] User loaded from localStorage:', parsedUser);
           } catch (error) {
-            console.log('[ERROR] Failed to parse saved user data');
+            // Silent fail
           }
         }
         
@@ -46,17 +44,13 @@ export const AuthProvider = ({ children }) => {
             setUser(response.data.user);
             // Update localStorage with fresh user data
             localStorage.setItem('user', JSON.stringify(response.data.user));
-            console.log('[OK] Token verified, user updated:', response.data.user);
           }
         } catch (error) {
-          console.log('[ERROR] Token verification failed, removing token:', error.response?.data || error.message);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           delete api.defaults.headers.common['Authorization'];
           setUser(null);
         }
-      } else {
-        console.log('No token found in localStorage');
       }
       setLoading(false);
     };
@@ -66,10 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log('[INFO] Starting login process with:', credentials);
-      
       const response = await api.post('/auth/login', credentials);
-      console.log('[OK] Login API response:', response.data);
       
       const { access_token, user: userData } = response.data;
 
@@ -85,7 +76,6 @@ export const AuthProvider = ({ children }) => {
       // Set user state
       setUser(userData);
       
-      console.log('[OK] Login successful, user set and saved:', userData);
       return { success: true, user: userData };
       
     } catch (error) {
@@ -98,7 +88,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('🚪 Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];

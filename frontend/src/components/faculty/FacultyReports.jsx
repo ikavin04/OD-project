@@ -351,14 +351,15 @@ const FacultyReports = () => {
             <button
               onClick={exportToExcel}
               disabled={filteredRequests.length === 0}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 filteredRequests.length === 0
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg'
               }`}
             >
-              <FileSpreadsheet className="h-5 w-5" />
-              <span>Export to Excel</span>
+              <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Export to Excel</span>
+              <span className="sm:hidden">Export</span>
             </button>
           </div>
         </div>
@@ -502,166 +503,227 @@ const FacultyReports = () => {
               <p className="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Event
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Proof Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {request.student?.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {request.student?.roll_number} | Year {request.student?.year} - {request.student?.section}
+            <>
+              {/* Desktop Table View - Hidden on mobile */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Student
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Event
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Proof Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredRequests.map((request) => (
+                      <tr key={request.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {request.student?.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {request.student?.roll_number} | Year {request.student?.year} - {request.student?.section}
+                              </div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">{request.event_name}</div>
+                          <div className="text-sm text-gray-500">{request.host_institution || request.college_name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {format(new Date(request.from_date), 'dd MMM yyyy')}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            to {format(new Date(request.to_date), 'dd MMM yyyy')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(request.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getProofStatusBadge(request.proof_submission_status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handleViewDetails(request)}
+                            className="text-blue-600 hover:text-blue-900 flex items-center"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View - Shown only on mobile */}
+              <div className="lg:hidden divide-y divide-gray-200">
+                {filteredRequests.map((request) => (
+                  <div key={request.id} className="p-4 hover:bg-gray-50">
+                    <div className="space-y-3">
+                      {/* Student Info */}
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">
+                              {request.student?.name}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {request.student?.roll_number} | Year {request.student?.year} - {request.student?.section}
+                            </p>
+                          </div>
+                          <div className="ml-2">
+                            {getStatusBadge(request.status)}
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{request.event_name}</div>
-                        <div className="text-sm text-gray-500">{request.host_institution || request.college_name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {format(new Date(request.from_date), 'dd MMM yyyy')}
+                      </div>
+
+                      {/* Event Info */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {request.event_name}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {request.host_institution || request.college_name}
+                        </p>
+                      </div>
+
+                      {/* Date */}
+                      <div className="flex items-center text-xs text-gray-600">
+                        <Calendar className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">
+                          {format(new Date(request.from_date), 'dd MMM yyyy')} - {format(new Date(request.to_date), 'dd MMM yyyy')}
+                        </span>
+                      </div>
+
+                      {/* Proof Status */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          {getProofStatusBadge(request.proof_submission_status)}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          to {format(new Date(request.to_date), 'dd MMM yyyy')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(request.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getProofStatusBadge(request.proof_submission_status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => handleViewDetails(request)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center"
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          View
+                          View Details
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* Modal for viewing details */}
       {showModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-gray-900">OD Request Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">OD Request Details</h2>
               <button
                 onClick={() => setShowModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <XCircle className="h-6 w-6" />
+                <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-3 sm:p-6">
               {/* Student Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <User className="h-5 w-5 mr-2 text-blue-600" />
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm sm:text-base">
+                  <User className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                   Student Information
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Name</p>
-                    <p className="font-medium">{selectedRequest.student?.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Name</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.student?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Roll Number</p>
-                    <p className="font-medium">{selectedRequest.student?.roll_number}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Roll Number</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.student?.roll_number}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Year & Section</p>
-                    <p className="font-medium">Year {selectedRequest.student?.year} - Section {selectedRequest.student?.section}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Year & Section</p>
+                    <p className="font-medium text-sm sm:text-base">Year {selectedRequest.student?.year} - Section {selectedRequest.student?.section}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Department</p>
-                    <p className="font-medium">{selectedRequest.student?.department}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Department</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.student?.department}</p>
                   </div>
                 </div>
               </div>
 
               {/* Event Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center text-sm sm:text-base">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                   Event Information
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Event Name</p>
-                    <p className="font-medium">{selectedRequest.event_name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Event Name</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.event_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Institution</p>
-                    <p className="font-medium">{selectedRequest.host_institution || selectedRequest.college_name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Institution</p>
+                    <p className="font-medium text-sm sm:text-base break-words">{selectedRequest.host_institution || selectedRequest.college_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">From Date</p>
-                    <p className="font-medium">{format(new Date(selectedRequest.from_date), 'dd MMM yyyy')}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">From Date</p>
+                    <p className="font-medium text-sm sm:text-base">{format(new Date(selectedRequest.from_date), 'dd MMM yyyy')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">To Date</p>
-                    <p className="font-medium">{format(new Date(selectedRequest.to_date), 'dd MMM yyyy')}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">To Date</p>
+                    <p className="font-medium text-sm sm:text-base">{format(new Date(selectedRequest.to_date), 'dd MMM yyyy')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Venue</p>
-                    <p className="font-medium">{selectedRequest.venue || 'N/A'}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Venue</p>
+                    <p className="font-medium text-sm sm:text-base break-words">{selectedRequest.venue || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">OD Type</p>
-                    <p className="font-medium">{selectedRequest.od_type?.replace(/_/g, ' ')}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">OD Type</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.od_type?.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
                 {selectedRequest.event_description && (
-                  <div className="mt-4">
-                    <p className="text-sm text-gray-600">Description</p>
-                    <p className="font-medium">{selectedRequest.event_description}</p>
+                  <div className="mt-3 sm:mt-4">
+                    <p className="text-xs sm:text-sm text-gray-600">Description</p>
+                    <p className="font-medium text-sm sm:text-base">{selectedRequest.event_description}</p>
                   </div>
                 )}
               </div>
 
               {/* Status Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Status Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Status Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <p className="text-sm text-gray-600">OD Status</p>
                     <div className="mt-1">{getStatusBadge(selectedRequest.status)}</div>

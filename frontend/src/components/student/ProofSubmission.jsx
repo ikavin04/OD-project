@@ -61,8 +61,6 @@ function ProofSubmission() {
       const approvedRequests = (response.data.od_requests || []).filter(
         req => req.status === 'approved'
       );
-      // Debug: inspect whether attendance_proof is present
-      console.log('ProofSubmission: fetched approved requests =', approvedRequests.map(r => ({ id: r.id, attendance_proof: !!r.attendance_proof, filename: r.attendance_proof?.filename })));
       setOdRequests(approvedRequests);
     } catch (error) {
       console.error('Failed to fetch approved OD requests:', error);
