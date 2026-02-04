@@ -31,9 +31,6 @@ from PIL import Image
 import pytesseract
 import io
 
-# Google Drive integration
-from google_drive_helper import get_drive_manager
-
 # ImgBB & Catbox file upload integration
 from imgbb_catbox_helper import upload_file
 
