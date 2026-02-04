@@ -116,7 +116,7 @@ const LoginForm = () => {
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center">
             <img 
-              src="https://miro.medium.com/v2/resize:fit:2400/1*aDT5b3T7zBUNALBRlikHjg.jpeg" 
+              src="/Logo.jpeg" 
               alt="College Logo" 
               className="h-20 w-auto object-contain"
             />

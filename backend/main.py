@@ -1323,6 +1323,7 @@ def export_faculty_od_reports():
     from flask import request as flask_request
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.worksheet.hyperlink import Hyperlink
     from io import BytesIO
     from datetime import datetime
     
@@ -1447,6 +1448,11 @@ def export_faculty_od_reports():
             cell.border = Border(left=Side(style='thin'), right=Side(style='thin'),
                                top=Side(style='thin'), bottom=Side(style='thin'))
             
+            # Make link columns clickable (columns 23, 24, 25)
+            if col in [23, 24, 25] and value != "Not Available":
+                cell.hyperlink = value
+                cell.style = "Hyperlink"
+            
             # Color coding
             if col == 16 and value == "Yes":  # Attendance
                 cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
@@ -1454,7 +1460,6 @@ def export_faculty_od_reports():
                 cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
             elif col in [23, 24, 25] and value != "Not Available":  # Links
                 cell.fill = PatternFill(start_color="E1F5FE", end_color="E1F5FE", fill_type="solid")
-                cell.font = Font(color="01579B", underline='single')
     
     # Set column widths
     widths = [8, 25, 15, 8, 10, 30, 35, 40, 35, 25, 25, 15, 15, 12, 22, 25, 22, 22, 25, 30, 18, 18, 50, 50, 50]

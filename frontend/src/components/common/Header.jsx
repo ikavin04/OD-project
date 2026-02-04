@@ -31,7 +31,7 @@ const Header = () => {
           <div className="flex items-center flex-1 sm:flex-initial">
             <Link to={user?.role === 'student' ? '/student' : '/faculty'} className="flex items-center" onClick={closeMobileMenu}>
               <img 
-                src="https://miro.medium.com/v2/resize:fit:2400/1*aDT5b3T7zBUNALBRlikHjg.jpeg" 
+                src="/Logo.jpeg" 
                 alt="College Logo"
                 className="h-7 w-7 sm:h-10 sm:w-10 object-cover rounded flex-shrink-0"
               />
